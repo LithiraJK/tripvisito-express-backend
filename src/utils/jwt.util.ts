@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import { IUser } from "../models/user.model";
 import { env } from "../config/env";
 
@@ -19,16 +19,39 @@ export interface JWTPayload {
  * @returns JWT access token string
  */
 export const signAccessToken = (user: IUser): string => {
-  
   const payload: JWTPayload = {
-    sub: user._id!.toString(),
+    sub: user._id.toString(),
     roles: user.roles,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
   };
 
-  return jwt.sign(payload, env.JWT_SECRET, { 
-    expiresIn: env.JWT_EXPIRES_IN
-  } as jwt.SignOptions);
+  const secret = env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not defined in environment variables");
+  }
+
+  const options: SignOptions = {
+    expiresIn: env.JWT_EXPIRES_IN as any,
+  };
+
+  return jwt.sign(payload, secret, options);
+};
+
+export const signRefreshToken = (user: IUser): string => {
+  const payload: any = {
+    sub: user._id.toString(),
+  };
+
+  const secret = env.JWT_REFRESH_SECRECT;
+  if (!secret) {
+    throw new Error("JWT_REFRESH_SECRECT is not defined in environment variables");
+  }
+
+  const options: SignOptions = {
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
+  };
+
+  return jwt.sign(payload, secret, options);
 };

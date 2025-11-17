@@ -1,13 +1,15 @@
 import bcrypt from "bcryptjs";
 import { Role, User } from "../models/user.model";
 import { Request, Response } from "express";
-import { signAccessToken } from "../utils/jwt.util";
+import { JWTPayload, signAccessToken, signRefreshToken } from "../utils/jwt.util";
 import { sendSuccess, sendError } from "../services/api.response.util";
 import { env } from "../config/env";
 import { AuthRequest } from "../middlewares/auth.middleware";
+import jwt from "jsonwebtoken"
+import { IUser} from "../models/user.model";
+
 
 export const createSuperAdmin = async () => {
-
 
   try {
     const existsSuperAdmin = await User.findOne({ roles: [Role.SUPERADMIN] });
@@ -135,9 +137,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     }
 
     const accessToken = signAccessToken(existUser);
+    const refreshToken = signRefreshToken(existUser);
 
     sendSuccess(res, 200, "User logged in successfully", {
       token: accessToken,
+      refreshToken: refreshToken,
       user: {
         id: existUser._id,
         email: existUser.email,
@@ -150,3 +154,44 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     sendError(res, 500, "Internal Server Error", error instanceof Error ? error.message : "Unknown error");
   }
 };
+
+
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: "Refresh token is required" })
+    }
+
+    // verify refresh token
+    const payload = jwt.verify(
+      refreshToken,
+      env.JWT_REFRESH_SECRECT
+    )
+
+    const userId = (payload as JWTPayload).sub
+
+    const user = await User.findById(userId) as IUser | null
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" })
+    }
+
+    const newAccessToken = signAccessToken(user)
+
+    //send new access token
+    res.status(200).json({
+      message: "success",
+      data: {
+        accessToken: newAccessToken
+      }
+    })
+    
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      message: "Invalid refresh token or Expired"
+    })
+    
+  }
+}

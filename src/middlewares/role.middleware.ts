@@ -16,7 +16,7 @@ export const requireRole = (roles: Role[]) => {
     if (!hasRequiredRole) {
       return sendError(res, 403, "Access Forbidden");
     }
-
+    
     next();
   };
 };

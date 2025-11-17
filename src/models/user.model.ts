@@ -7,6 +7,7 @@ export enum Role {
 }
 
 export interface IUser extends Document {
+  _id: mongoose.Types.ObjectId;
   email: string;
   firstName: string;
   lastName: string;

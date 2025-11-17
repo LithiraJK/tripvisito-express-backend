@@ -7,7 +7,9 @@ interface EnvConfig {
   HOST: string;
   MONGODB_URI: string;
   JWT_SECRET: string;
+  JWT_REFRESH_SECRECT: string;
   JWT_EXPIRES_IN: string;
+  JWT_REFRESH_EXPIRES_IN: string;
   BCRYPT_ROUNDS: number;
   CORS_ORIGIN: string;
   SUPERADMIN_EMAIL: string;
@@ -21,8 +23,10 @@ export const env: EnvConfig = {
   PORT: parseInt(process.env.PORT || "5000", 10),
   HOST: process.env.HOST || "localhost",
   MONGODB_URI: process.env.MONGODB_URI || "",
-  JWT_SECRET: process.env.JWT_SECRET || "",
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+  JWT_SECRET: process.env.JWT_SECRET || "fallback-secret-key",
+  JWT_REFRESH_SECRECT: process.env.JWT_REFRESH_SECRECT || "fallback-refresh-key",
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "15m",
+  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || "10", 10),
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL || "",
