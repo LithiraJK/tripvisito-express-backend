@@ -9,12 +9,12 @@ export enum Role {
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   password: string;
   roles: Role[];
   isBlock: boolean;
   profileimg?: string;
+  joinedAt: Date;
 }
 
 const userSchema = new mongoose.Schema<IUser>({
@@ -23,14 +23,11 @@ const userSchema = new mongoose.Schema<IUser>({
     required: true,
     unique: true,
   },
-  firstName: {
+  name: {
     type: String,
     required: true,
   },
-  lastName: {
-    type: String,
-    required: true,
-  },
+ 
   password: {
     type: String,
     required: true,
@@ -51,6 +48,10 @@ const userSchema = new mongoose.Schema<IUser>({
     required: false,
     default:
       "https://img.freepik.com/premium-vector/vector-flat-illustration-grayscale-avatar-user-profile-person-icon-profile-picture-business-profile-woman-suitable-social-media-profiles-icons-screensavers-as-templatex9_719432-1339.jpg?semt=ais_hybrid&w=740&q=80",
+  },
+  joinedAt: {
+    type: Date,
+    default: Date.now,
   }
 
 },{ timestamps: true });

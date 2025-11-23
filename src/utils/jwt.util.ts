@@ -7,8 +7,7 @@ export interface JWTPayload {
   sub: string;
   roles: string[];
   email: string;
-  firstName: string;
-  lastName: string;
+  name : string;
   iat?: number;
   exp?: number;
 }
@@ -23,8 +22,7 @@ export const signAccessToken = (user: IUser): string => {
     sub: user._id.toString(),
     roles: user.roles,
     email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
+    name : user.name
   };
 
   const secret = env.JWT_SECRET;

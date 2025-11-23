@@ -14,8 +14,11 @@ interface EnvConfig {
   CORS_ORIGIN: string;
   SUPERADMIN_EMAIL: string;
   SUPERADMIN_PASSWORD: string;
-  SUPERADMIN_FIRST_NAME: string;
-  SUPERADMIN_LAST_NAME: string;
+  SUPERADMIN_NAME: string;
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_API_KEY: string;
+  CLOUDINARY_API_SCRET: string;
+  
 }
 
 export const env: EnvConfig = {
@@ -31,8 +34,10 @@ export const env: EnvConfig = {
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL || "",
   SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD || "",
-  SUPERADMIN_FIRST_NAME: process.env.SUPERADMIN_FIRST_NAME || "Super",
-  SUPERADMIN_LAST_NAME: process.env.SUPERADMIN_LAST_NAME || "Admin"
+  SUPERADMIN_NAME: process.env.SUPERADMIN_NAME || "Super Admin",
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
+  CLOUDINARY_API_SCRET: process.env.CLOUDINARY_API_SCRET || ""
 };
 
 // Validate required env vars on startup

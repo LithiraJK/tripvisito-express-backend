@@ -21,8 +21,7 @@ export const createSuperAdmin = async () => {
 
     await User.create({
       email: env.SUPERADMIN_EMAIL,
-      firstName: env.SUPERADMIN_FIRST_NAME,
-      lastName: env.SUPERADMIN_LAST_NAME,
+      name: env.SUPERADMIN_NAME,
       password: hashedPassword,
       roles: [Role.SUPERADMIN],
       isBlock: false,
@@ -66,8 +65,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       user: {
         id: newUser._id,
         email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
+        name: newUser.name,
         roles: newUser.roles,
         profileimg: newUser.profileimg,
       }
@@ -79,7 +77,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
 export const registerAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { email, firstName, lastName, password, profileimg } = req.body;
+    const { email, name , password, profileimg } = req.body;
 
     const existsAdmin = await User.findOne({ email });
 
@@ -92,8 +90,7 @@ export const registerAdmin = async (req: AuthRequest, res: Response): Promise<vo
 
     const newAdmin = await User.create({
       email: email,
-      firstName: firstName,
-      lastName: lastName,
+      name: name,
       password: hashedPassword,
       roles: [Role.ADMIN],
       isBlock: false,
@@ -107,8 +104,7 @@ export const registerAdmin = async (req: AuthRequest, res: Response): Promise<vo
       user: {
         id: newAdmin._id,
         email: newAdmin.email,
-        firstName: newAdmin.firstName,
-        lastName: newAdmin.lastName,
+        name: newAdmin.name,
         roles: newAdmin.roles,
         profileimg: newAdmin.profileimg,
       }
@@ -145,8 +141,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: existUser._id,
         email: existUser.email,
-        firstName: existUser.firstName,
-        lastName: existUser.lastName,
+        name: existUser.name,
         roles: existUser.roles,
       }
     });
