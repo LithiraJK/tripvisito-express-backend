@@ -14,8 +14,8 @@ const tripSchema = new Schema({
         type: String,
         required: true
     },
-    imageUrl:{
-        type: String
+    imageUrls:{
+        type: [String],
     },
     paymentLink:{
         type: String,
