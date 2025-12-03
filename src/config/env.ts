@@ -18,6 +18,8 @@ interface EnvConfig {
   CLOUDINARY_CLOUD_NAME: string;
   CLOUDINARY_API_KEY: string;
   CLOUDINARY_API_SCRET: string;
+  GEMINI_API_KEY: string;
+  UNSPLASH_ACCESS_KEY: string;
   
 }
 
@@ -37,7 +39,9 @@ export const env: EnvConfig = {
   SUPERADMIN_NAME: process.env.SUPERADMIN_NAME || "Super Admin",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
-  CLOUDINARY_API_SCRET: process.env.CLOUDINARY_API_SCRET || ""
+  CLOUDINARY_API_SCRET: process.env.CLOUDINARY_API_SCRET || "",
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY || ""
 };
 
 // Validate required env vars on startup

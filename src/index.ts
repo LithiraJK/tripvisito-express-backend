@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import authRouter from "./routes/auth.routes";
+import tripRouter from "./routes/trip.routes";
 import { createSuperAdmin } from "./controllers/auth.controller";
 import cors from "cors";
 import { env } from "./config/env";
@@ -17,6 +18,7 @@ app.use(
 )
 
 app.use("/api/v1/auth" , authRouter );
+app.use("/api/v1/ai" , tripRouter);
 
 mongoose
   .connect(env.MONGODB_URI)
