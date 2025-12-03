@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from "mongoose"
 export interface ITrip extends Document {
     _id: mongoose.Types.ObjectId;
     tripDetails: string;
-    imageUrl?: string;
+    imageUrls?: string[];
     paymentLink: string;
     createdAt: Date;
     userId: mongoose.Types.ObjectId;
@@ -18,8 +18,7 @@ const tripSchema = new Schema({
         type: [String],
     },
     paymentLink:{
-        type: String,
-        required: true
+        type: String
     },
     createdAt:{
         type : Date,

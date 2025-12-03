@@ -113,31 +113,41 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       return sendError(res, 500, "Failed to parse AI response");
     }
     
-    console.log(parsedContent);
-
-    // Fetch images from Unsplash with proper error handling
     let imageUrls: string[] = [];
     try {
-      // Filter out null/undefined values and create proper search query
-      const searchQuery = [country, interests, travelStyle]
-        .filter(Boolean)
-        .join(' ');
-      
-      const imageResponse = await axios.get(
-        `https://api.unsplash.com/search/photos`,
-        {
-          params: {
-            query: searchQuery,
-            client_id: env.UNSPLASH_ACCESS_KEY,
-            orientation: 'landscape',
-            per_page: 3
+      if (!env.UNSPLASH_ACCESS_KEY) {
+        console.warn("Unsplash API key not configured, skipping image fetch");
+      } else {
+        const searchQuery = [country, interests, travelStyle]
+          .filter(Boolean)
+          .join(' ');
+        
+        console.log("Fetching images for query:", searchQuery);
+        
+        const imageResponse = await axios.get(
+          `https://api.unsplash.com/search/photos`,
+          {
+            params: {
+              query: searchQuery,
+              client_id: env.UNSPLASH_ACCESS_KEY,
+              orientation: 'landscape',
+              per_page: 3
+            }
           }
-        }
-      );
+        );
 
-      imageUrls = imageResponse.data.results.slice(0, 3).map((img: any) => img.urls.regular || null);
-    } catch (imageError) {
-      console.error("Error fetching images from Unsplash:", imageError);
+        console.log("Unsplash API response:", imageResponse.data.results?.length || 0, "images found");
+
+        imageUrls = imageResponse.data.results
+          .map((img: any) => img.urls?.regular)
+          .filter((url: string | undefined) => url !== undefined && url !== null) as string[];
+        
+      }
+    } catch (imageError: any) {
+      console.error("Error fetching images from Unsplash:", imageError.message);
+      if (imageError.response) {
+        console.error("Unsplash API error details:", imageError.response.data);
+      }
       // Continue without images rather than failing the entire request
       imageUrls = [];
     }
@@ -145,16 +155,19 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
     const newTrip = await Trip.create({
       tripDetails: JSON.stringify(parsedContent),
       imageUrls: imageUrls,
-      paymentLink: " ",
+      paymentLink: "",
       createdAt: new Date(),
       userId: req.user?.sub,
-    })
+    });
 
     if (!newTrip) {
       return sendError(res, 500, "Failed to save the trip");
     }
-
-    sendSuccess(res, 200, "Trip generated successfully", parsedContent);
+    sendSuccess(res, 200, "Trip generated successfully", {
+      trip: parsedContent,
+      tripId: newTrip.id,
+      images: imageUrls
+    });
   } catch (error) {
     console.error("Error generating content:", error);
     sendError(res, 500, "Failed to generate a trip");
