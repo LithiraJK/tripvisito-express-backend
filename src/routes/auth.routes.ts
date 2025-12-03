@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginUser, registerAdmin, registerUser } from "../controllers/auth.controller";
+import { getMyProfile, loginUser, refreshToken, registerAdmin, registerUser } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
@@ -13,5 +13,8 @@ router.post("/login", loginUser)
 
 router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
 
+router.get("/me" , authenticate , getMyProfile)
+
+router.post("/refresh" , refreshToken)
 
 export default router;

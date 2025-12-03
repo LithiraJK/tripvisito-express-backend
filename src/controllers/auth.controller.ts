@@ -37,7 +37,7 @@ export const createSuperAdmin = async () => {
 
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, firstName, lastName, password, profileimg } = req.body;
+    const { email,name, password, profileimg } = req.body;
 
     const existUser = await User.findOne({ email });
 
@@ -50,18 +50,14 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
     const newUser = await User.create({
       email: email,
-      firstName: firstName,
-      lastName: lastName,
+      name: name,
       password: hashedPassword,
       roles: [Role.CUSTOMER],
       isBlock: false,
       profileimg: profileimg,
     });
 
-    const token = signAccessToken(newUser);
-
     sendSuccess(res, 201, "User registered successfully", {
-      token,
       user: {
         id: newUser._id,
         email: newUser.email,
@@ -136,7 +132,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = signRefreshToken(existUser);
 
     sendSuccess(res, 200, "User logged in successfully", {
-      token: accessToken,
+      accessToken: accessToken,
       refreshToken: refreshToken,
       user: {
         id: existUser._id,
@@ -151,12 +147,28 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 };
 
 
+export const getMyProfile = async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    return sendError(res, 401, "Unauthorized" )
+  }
+  const user = await User.findById(req.user.sub).select("-password")
+
+  if (!user) {
+    return sendError(res, 403, "User not found")
+  }
+
+  const { email, roles, _id } = user as IUser
+
+  sendSuccess(res, 200, "ok", { id: _id, email, roles })
+}
+
+
 export const refreshToken = async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body
 
     if (!refreshToken) {
-      return res.status(400).json({ message: "Refresh token is required" })
+      return res.status(401).json({ message: "Refresh token is required" })
     }
 
     // verify refresh token
@@ -175,18 +187,21 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newAccessToken = signAccessToken(user)
 
     //send new access token
-    res.status(200).json({
-      message: "success",
-      data: {
-        accessToken: newAccessToken
-      }
+    // res.status(200).json({
+    //   message: "success",
+    //   // data: {
+    //   //   accessToken: newAccessToken
+    //   // }
+    //   accessToken: newAccessToken
+    // })
+
+    sendSuccess(res, 200, "Token refreshed successfully", {
+      accessToken: newAccessToken
     })
     
   } catch (error) {
     console.error(error)
-    res.status(500).json({
-      message: "Invalid refresh token or Expired"
-    })
+    sendError(res, 500, "Invalid refresh token or Expired")
     
   }
 }

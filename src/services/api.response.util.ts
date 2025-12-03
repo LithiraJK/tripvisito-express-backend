@@ -9,28 +9,28 @@ interface ApiResponse<T = any> {
 
 export const sendSuccess = <T>(
   res: Response,
-  statusCode: number,
+  status: number,
   message: string,
   data?: T
 ): Response => {
   const response: ApiResponse<T> = {
-    status: statusCode,
+    status: status,
     message,
     data,
   };
-  return res.status(statusCode).json(response);
+  return res.status(status).json(response);
 };
 
 export const sendError = (
   res: Response,
-  statusCode: number,
+  status: number,
   message: string,
   error?: string
 ): Response => {
   const response: ApiResponse = {
-    status: statusCode,
+    status: status,
     message,
     error,
   };
-  return res.status(statusCode).json(response);
+  return res.status(status).json(response);
 };
