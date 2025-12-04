@@ -18,7 +18,7 @@ app.use(
 )
 
 app.use("/api/v1/auth" , authRouter );
-app.use("/api/v1/ai" , tripRouter);
+app.use("/api/v1/trip" , tripRouter);
 
 mongoose
   .connect(env.MONGODB_URI)
