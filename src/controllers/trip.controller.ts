@@ -173,3 +173,63 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
     sendError(res, 500, "Failed to generate a trip");
   }
 };
+
+
+export const getTripById = async (req: AuthRequest, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return sendError(res, 404, "Trip not found");
+    }
+    sendSuccess(res, 200, "Trip retrieved successfully", { 
+      trip: {
+        ...trip.toObject(),
+        tripDetails: JSON.parse(trip.tripDetails)
+      }
+    });
+  } catch (error) {
+    console.error("Error retrieving trip:", error);
+    sendError(res, 500, "Failed to retrieve the trip");
+  }
+};
+
+export const getAllTrips = async (req: AuthRequest, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const trips = await Trip.find()
+      .populate("userId", "email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Trip.countDocuments();
+    
+    const tripCards = trips.map(trip => {
+      return {
+        id: trip._id.toString(),
+        tripDetails: JSON.parse(trip.tripDetails),
+        imageUrls: trip.imageUrls
+      };
+    });
+
+    sendSuccess(
+      res, 
+      200, 
+      "Trips data", 
+      {
+        trips: tripCards,
+        totalPages: Math.ceil(total / limit),
+        totalCount: total,
+        page
+      }
+    );
+  } catch (error) {
+    console.error("Error retrieving trips:", error);
+    sendError(res, 500, "Failed to retrieve trips");
+  }
+};
