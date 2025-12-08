@@ -52,7 +52,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       email: email,
       name: name,
       password: hashedPassword,
-      roles: [Role.CUSTOMER],
+      roles: [Role.USER],
       isBlock: false,
       profileimg: profileimg,
     });
@@ -157,9 +157,36 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
     return sendError(res, 403, "User not found")
   }
 
-  const { email, roles, _id } = user as IUser
+  const { email, roles, name, _id , profileimg } = user as IUser
 
-  sendSuccess(res, 200, "ok", { id: _id, email, roles })
+  sendSuccess(res, 200, "ok", { id: _id, email, name, roles , profileimg })
+}
+
+export const getAllUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1 ;
+    const limit = parseInt(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find()
+      .populate("email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await User.countDocuments()
+
+    sendSuccess(res , 200 , "Users Data fetch successfully !" , {
+        users: users,
+        totalPages: Math.ceil(total / limit),
+        totalCount: total,
+        page
+      } )
+    
+  } catch (error) {
+    console.error("Error retrieving users:", error);
+    sendError(res, 500, "Failed to retrieve users");
+  }
 }
 
 
@@ -185,15 +212,6 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     const newAccessToken = signAccessToken(user)
-
-    //send new access token
-    // res.status(200).json({
-    //   message: "success",
-    //   // data: {
-    //   //   accessToken: newAccessToken
-    //   // }
-    //   accessToken: newAccessToken
-    // })
 
     sendSuccess(res, 200, "Token refreshed successfully", {
       accessToken: newAccessToken

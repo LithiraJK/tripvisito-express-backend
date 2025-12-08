@@ -3,7 +3,7 @@ import mongoose, { Document } from "mongoose";
 export enum Role {
   SUPERADMIN = "SUPERADMIN",
   ADMIN = "ADMIN",
-  CUSTOMER = "CUSTOMER",
+  USER = "USER",
 }
 
 export interface IUser extends Document {
@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema<IUser>({
     type: [String],
     required: true,
     enum: Object.values(Role),
-    default: [Role.CUSTOMER],
+    default: [Role.USER],
   },
   isBlock: {
     type: Boolean,
