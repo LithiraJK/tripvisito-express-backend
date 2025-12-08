@@ -198,11 +198,11 @@ export const getTripById = async (req: AuthRequest, res: Response) => {
 export const getAllTrips = async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
     const trips = await Trip.find()
-      .populate("userId", "email")
+      .populate("userId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -233,3 +233,26 @@ export const getAllTrips = async (req: AuthRequest, res: Response) => {
     sendError(res, 500, "Failed to retrieve trips");
   }
 };
+
+// export const getTripsByUser = async (req: AuthRequest, res: Response) => {
+//   try {
+//     if (!req.user) {
+//       return sendError(res, 401, "Unauthorized");
+//     }
+//     const userId = req.user.sub;
+
+//     const trips = await Trip.find({ userId: userId }).sort({ createdAt: -1 });
+//     const tripCards = trips.map(trip => {
+//       return {
+//         id: trip._id.toString(),
+//         tripDetails: JSON.parse(trip.tripDetails),
+//         imageUrls: trip.imageUrls
+//       };
+//     });
+
+//     sendSuccess(res, 200, "User trips retrieved successfully", { trips: tripCards });
+//   } catch (error) {
+//     console.error("Error retrieving user trips:", error);
+//     sendError(res, 500, "Failed to retrieve user trips");
+//   }
+// };
