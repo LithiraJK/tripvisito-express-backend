@@ -33,56 +33,115 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       maxToken,
     } = req.body;
 
-    const prompt = `Generate a ${duration}-day travel itinerary for ${country} based on the following user information:
-    Budget: '${budget}'
-    Interests: '${interests}'
-    TravelStyle: '${travelStyle}'
-    GroupType: '${groupType}'
-    Return the itinerary and lowest estimated price in a clean, non-markdown JSON format with the following structure:
-    {
-    "name": "A descriptive title for the trip",
-    "description": "A brief description of the trip and its highlights not exceeding 100 words",
-    "estimatedPrice": "Lowest average price for the trip in USD, e.g.$price",
-    "duration": ${duration},
-    "budget": "${budget}",
-    "travelStyle": "${travelStyle}",
-    "country": "${country}",
-    "interests": ${interests},
-    "groupType": "${groupType}",
-    "bestTimeToVisit": [
-      '🌸 Season (from month to month): reason to visit',
-      '☀️ Season (from month to month): reason to visit',
-      '🍁 Season (from month to month): reason to visit',
-      '❄️ Season (from month to month): reason to visit'
-    ],
-    "weatherInfo": [
-      '☀️ Season: temperature range in Celsius (temperature range in Fahrenheit)',
-      '🌦️ Season: temperature range in Celsius (temperature range in Fahrenheit)',
-      '🌧️ Season: temperature range in Celsius (temperature range in Fahrenheit)',
-      '❄️ Season: temperature range in Celsius (temperature range in Fahrenheit)'
-    ],
-    "location": {
-      "city": "name of the city or region",
-      "coordinates": [latitude, longitude],
-      "openStreetMap": "link to open street map"
-    },
-    "itinerary": [
+
+    const prompt = `
+Generate a ${duration}-day travel itinerary for ${country} based on the following user information.
+
+Budget: ${budget}
+Interests: ${interests}
+TravelStyle: ${travelStyle}
+GroupType: ${groupType}
+
+IMPORTANT RULES:
+- Return ONLY valid JSON
+- Do NOT use markdown
+- Do NOT include explanations or extra text
+- All values must be valid JSON
+- itinerary must contain exactly ${duration} days
+
+JSON STRUCTURE:
+{
+  "name": "A descriptive title for the trip",
+  "description": "Brief description under 100 words",
+  "estimatedPrice": "Lowest average price in USD",
+  "duration": ${duration},
+  "budget": "${budget}",
+  "travelStyle": "${travelStyle}",
+  "country": "${country}",
+  "interests": ${interests},
+  "groupType": "${groupType}",
+  "bestTimeToVisit": [
+    "🌸 Spring (from month to month): reason",
+    "☀️ Summer (from month to month): reason",
+    "🍁 Autumn (from month to month): reason",
+    "❄️ Winter (from month to month): reason"
+  ],
+  "weatherInfo": [
+    "🌸 Spring: temperature range in °C (°F)",
+    "☀️ Summer: temperature range in °C (°F)",
+    "🌧️ Monsoon: temperature range in °C (°F)",
+    "❄️ Winter: temperature range in °C (°F)"
+  ],
+  "location": {
+    "city": "City or region name",
+    "coordinates": [latitudeNumber, longitudeNumber],
+    "openStreetMap": "https://www.openstreetmap.org/..."
+  },
+  "itinerary": [
     {
       "day": 1,
       "location": "City/Region Name",
       "activities": [
-        {"time": "Morning", "description": "🏰 Visit the local historic castle and enjoy a scenic walk"},
-        {"time": "Afternoon", "description": "🖼️ Explore a famous art museum with a guided tour"},
-        {"time": "Evening", "description": "🍷 Dine at a rooftop restaurant with local wine"}
+        {"time": "Morning", "description": "🏰 Activity"},
+        {"time": "Afternoon", "description": "🖼️ Activity"},
+        {"time": "Evening", "description": "🍽️ Activity"}
       ]
-    },
-    ...
-    ]
-    }`;
+    }
+  ]
+}
+`;
+
+
+    // const prompt = `Generate a ${duration}-day travel itinerary for ${country} based on the following user information:
+    // Budget: '${budget}'
+    // Interests: '${interests}'
+    // TravelStyle: '${travelStyle}'
+    // GroupType: '${groupType}'
+    // Return the itinerary and lowest estimated price in a clean, non-markdown JSON format with the following structure:
+    // {
+    // "name": "A descriptive title for the trip",
+    // "description": "A brief description of the trip and its highlights not exceeding 100 words",
+    // "estimatedPrice": "Lowest average price for the trip in USD, e.g.$price",
+    // "duration": ${duration},
+    // "budget": "${budget}",
+    // "travelStyle": "${travelStyle}",
+    // "country": "${country}",
+    // "interests": ${interests},
+    // "groupType": "${groupType}",
+    // "bestTimeToVisit": [
+    //   " Season (from month to month): reason to visit",
+    //   " Season (from month to month): reason to visit",
+    //   " Season (from month to month): reason to visit",
+    //   " Season (from month to month): reason to visit"
+    // ],
+    // "weatherInfo": [
+    //   " Season: temperature range in Celsius (temperature range in Fahrenheit)",
+    //   " Season: temperature range in Celsius (temperature range in Fahrenheit)",
+    //   " Season: temperature range in Celsius (temperature range in Fahrenheit)",
+    //   " Season: temperature range in Celsius (temperature range in Fahrenheit)"
+    // ],
+    // "location": {
+    //   "city": "name of the city or region",
+    //   "coordinates": [latitude, longitude],
+    //   "openStreetMap": "link to open street map"
+    // },
+    // "itinerary": [
+    // {
+    //   "day": 1,
+    //   "location": "City/Region Name",
+    //   "activities": [
+    //     {"time": "Morning", "description": " Visit the local historic castle and enjoy a scenic walk"},
+    //     {"time": "Afternoon", "description": " Explore a famous art museum with a guided tour"},
+    //     {"time": "Evening", "description": " Dine at a rooftop restaurant with local wine"}
+    //   ]
+    // },
+    // ...
+    // ]
+    // }`;
 
     // Call to Google Gemini API
     const aiResponse = await axios.post(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
       {
         contents: [
           {
@@ -90,7 +149,7 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
           },
         ],
         generationConfig: {
-          maxOutputTokens: maxToken || 1500,
+          maxOutputTokens: maxToken || 2500,
         },
       },
       {
@@ -107,12 +166,21 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       aiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No data";
 
-    const parsedContent = parseMarkdownToJSON(generatedContent);
-    
+    // const parsedContent = parseMarkdownToJSON(generatedContent);
+    // const parsedContent = generatedContent;
+
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(generatedContent);
+    } catch (e) {
+      console.error("JSON parse error:", generatedContent);
+      return sendError(res, 500, "Invalid AI JSON response");
+    }
+
     if (!parsedContent) {
       return sendError(res, 500, "Failed to parse AI response");
     }
-    
+
     let imageUrls: string[] = [];
     try {
       if (!env.UNSPLASH_ACCESS_KEY) {
@@ -120,28 +188,33 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       } else {
         const searchQuery = [country, interests, travelStyle]
           .filter(Boolean)
-          .join(' ');
-        
+          .join(" ");
+
         console.log("Fetching images for query:", searchQuery);
-        
+
         const imageResponse = await axios.get(
           `https://api.unsplash.com/search/photos`,
           {
             params: {
               query: searchQuery,
               client_id: env.UNSPLASH_ACCESS_KEY,
-              orientation: 'landscape',
-              per_page: 3
-            }
+              orientation: "landscape",
+              per_page: 3,
+            },
           }
         );
 
-        console.log("Unsplash API response:", imageResponse.data.results?.length || 0, "images found");
+        console.log(
+          "Unsplash API response:",
+          imageResponse.data.results?.length || 0,
+          "images found"
+        );
 
         imageUrls = imageResponse.data.results
           .map((img: any) => img.urls?.regular)
-          .filter((url: string | undefined) => url !== undefined && url !== null) as string[];
-        
+          .filter(
+            (url: string | undefined) => url !== undefined && url !== null
+          ) as string[];
       }
     } catch (imageError: any) {
       console.error("Error fetching images from Unsplash:", imageError.message);
@@ -166,14 +239,13 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
     sendSuccess(res, 200, "Trip generated successfully", {
       trip: parsedContent,
       tripId: newTrip.id,
-      images: imageUrls
+      images: imageUrls,
     });
   } catch (error) {
     console.error("Error generating content:", error);
     sendError(res, 500, "Failed to generate a trip");
   }
 };
-
 
 export const getTripById = async (req: AuthRequest, res: Response) => {
   try {
@@ -183,11 +255,11 @@ export const getTripById = async (req: AuthRequest, res: Response) => {
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
-    sendSuccess(res, 200, "Trip retrieved successfully", { 
+    sendSuccess(res, 200, "Trip retrieved successfully", {
       trip: {
         ...trip.toObject(),
-        tripDetails: JSON.parse(trip.tripDetails)
-      }
+        tripDetails: JSON.parse(trip.tripDetails),
+      },
     });
   } catch (error) {
     console.error("Error retrieving trip:", error);
@@ -208,26 +280,21 @@ export const getAllTrips = async (req: AuthRequest, res: Response) => {
       .limit(limit);
 
     const total = await Trip.countDocuments();
-    
-    const tripCards = trips.map(trip => {
+
+    const tripCards = trips.map((trip) => {
       return {
         id: trip._id.toString(),
         tripDetails: JSON.parse(trip.tripDetails),
-        imageUrls: trip.imageUrls
+        imageUrls: trip.imageUrls,
       };
     });
 
-    sendSuccess(
-      res, 
-      200, 
-      "Trips data", 
-      {
-        trips: tripCards,
-        totalPages: Math.ceil(total / limit),
-        totalCount: total,
-        page
-      }
-    );
+    sendSuccess(res, 200, "Trips data", {
+      trips: tripCards,
+      totalPages: Math.ceil(total / limit),
+      totalCount: total,
+      page,
+    });
   } catch (error) {
     console.error("Error retrieving trips:", error);
     sendError(res, 500, "Failed to retrieve trips");
