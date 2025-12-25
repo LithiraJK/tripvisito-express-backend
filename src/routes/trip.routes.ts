@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { generateTrip, getAllTrips, getTripById, updateTrip, getTripsByUser } from "../controllers/trip.controller";
+import { generateTrip, getAllTrips, getTripById, updateTrip, getTripsByUser, deleteTrip } from "../controllers/trip.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -10,5 +10,6 @@ router.get("/all", authenticate, getAllTrips )
 router.get("/user-trips", authenticate, getTripsByUser )
 router.get("/:tripId", authenticate, getTripById )
 router.put("/edit/:tripId", authenticate, upload.array("imageURLs"), updateTrip )
+router.delete("/delete/:tripId", authenticate, deleteTrip )
 
 export default router;

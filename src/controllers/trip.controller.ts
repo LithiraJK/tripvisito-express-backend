@@ -370,3 +370,27 @@ export const getTripsByUser = async (req: AuthRequest, res: Response) => {
     sendError(res, 500, "Failed to retrieve user trips");
   }
 };
+
+
+export const deleteTrip = async (req: AuthRequest, res: Response) => {
+  try {
+    const { tripId } = req.params;
+    if (!req.user) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return sendError(res, 404, "Trip not found");
+    }
+    if (trip.userId.toString() !== req.user.sub) {
+      return sendError(res, 403, "You don't have permission to delete this trip");
+    }
+    await Trip.findByIdAndDelete(tripId);
+    sendSuccess(res, 200, "Trip deleted successfully");
+  } catch (error) {
+    console.error("Error deleting trip:", error);
+    sendError(res, 500, "Failed to delete the trip");
+  }
+};
