@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import { sendError, sendSuccess } from "../services/api.response.util";
 import { Trip } from "../models/trip.model";
 import { AuthRequest } from "../middlewares/auth.middleware";
+import cloudinary from "../config/cloudinary";
 
 export function parseMarkdownToJSON(markdownString: string): any {
   const regex = /```json([\s\S]*?)```/;
@@ -252,35 +253,65 @@ export const getAllTrips = async (req: AuthRequest, res: Response) => {
     sendError(res, 500, "Failed to retrieve trips");
   }
 };
-
 export const updateTrip = async (req: AuthRequest, res: Response) => {
   try {
     const { tripId } = req.params;
-    const updateData = req.body;
+    const { tripDetails, existingImages } = req.body;
+    let imageURLs: string[] = [];
 
     if (!req.user) {
       return sendError(res, 401, "Unauthorized");
     }
 
-    // Find the trip first
     const trip = await Trip.findById(tripId);
 
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
 
-    // Check if the user owns this trip
     if (trip.userId.toString() !== req.user.sub) {
       return sendError(res, 403, "You don't have permission to update this trip");
     }
 
-    // Update the trip
+    if (existingImages) {
+      try {
+        const parsedExisting = typeof existingImages === 'string' 
+          ? JSON.parse(existingImages) 
+          : existingImages;
+        imageURLs = Array.isArray(parsedExisting) ? parsedExisting : [];
+      } catch (e) {
+        console.error("Error parsing existing images:", e);
+      }
+    }
+
+    // Upload new images to Cloudinary
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const result: any = await new Promise((resolve, reject) => {
+          const upload_stream = cloudinary.uploader.upload_stream(
+            { folder: "trips" },
+            (error, result) => {
+              if (error) {
+                return reject(error);
+              }
+              resolve(result);
+            }
+          );
+          upload_stream.end(file.buffer);
+        });
+        imageURLs.push(result.secure_url);
+      }
+    }
+
+    const parsedTripDetails = typeof tripDetails === 'string' 
+      ? tripDetails 
+      : JSON.stringify(tripDetails);
+
     const updatedTrip = await Trip.findByIdAndUpdate(
       tripId,
       {
-        ...(updateData.tripDetails && { tripDetails: JSON.stringify(updateData.tripDetails) }),
-        ...(updateData.imageUrls && { imageUrls: updateData.imageUrls }),
-        ...(updateData.paymentLink !== undefined && { paymentLink: updateData.paymentLink }),
+        tripDetails: parsedTripDetails,
+        imageUrls: imageURLs,
       },
       { new: true }
     );
