@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { getAllUsers, getMyProfile, loginUser, refreshToken, registerAdmin, registerUser } from "../controllers/auth.controller";
+import { addNewUser, deleteUser, getAllUsers, getMyProfile, loginUser, refreshToken, registerAdmin, registerUser, updateUserStatus } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
+import { upload } from "../middlewares/upload.middleware";
 
 
 const router = Router();
@@ -18,5 +19,11 @@ router.get("/me" , authenticate , getMyProfile)
 router.get("/users" , authenticate , requireRole([Role.ADMIN]), getAllUsers )
 
 router.post("/refresh" , refreshToken)
+
+router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN]), upload.single("profileimg") , addNewUser)
+
+router.put("/status/:id" , authenticate, requireRole([Role.ADMIN]) , updateUserStatus)
+
+router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN]) , deleteUser )
 
 export default router;
