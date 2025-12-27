@@ -226,6 +226,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (existUser.isBlock) {
+      sendError(res, 403, "User is blocked");
+      return;
+    }
+
     const accessToken = signAccessToken(existUser);
     const refreshToken = signRefreshToken(existUser);
 
@@ -333,9 +338,12 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
       return sendError(res, 404, "User not found");
     }
 
+    if(user.roles.includes(Role.ADMIN)) {
+      return sendError(res, 403, "Cannot change status of Super Admin");
+    }
+
     user.isBlock = isBlock;
     await user.save();
-
     sendSuccess(res, 200, "User status updated successfully", { user });
   } catch (error) {
     console.error("Error in updateUserStatus:", error);
@@ -351,14 +359,22 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
 export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.params.id;
-    const user = await User.findByIdAndDelete(userId);
+
+    const user = await User.findById(userId);
 
     if (!user) {
       return sendError(res, 404, "User not found");
     }
 
-    sendSuccess(res, 200, "User deleted successfully", { user });
+    if(user.roles.includes(Role.ADMIN)) {
+      return sendError(res, 403, "Cannot delete Admin users");
+    }
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
     
+
+    sendSuccess(res, 200, "User deleted successfully", { user: deletedUser });
   } catch (error) {
     sendError(
       res,
