@@ -6,9 +6,9 @@ import { upload } from "../middlewares/upload.middleware";
 const router = Router();
 
 router.post("/generate-trip", authenticate, generateTrip)
-router.get("/all", authenticate, getAllTrips )
+router.get("/all", getAllTrips )
 router.get("/user-trips", authenticate, getTripsByUser )
-router.get("/:tripId", authenticate, getTripById )
+router.get("/:tripId", getTripById )
 router.put("/edit/:tripId", authenticate, upload.array("imageURLs"), updateTrip )
 router.delete("/delete/:tripId", authenticate, deleteTrip )
 

@@ -200,7 +200,7 @@ JSON STRUCTURE:
   }
 };
 
-export const getTripById = async (req: AuthRequest, res: Response) => {
+export const getTripById = async (req: Request, res: Response) => {
   try {
     const { tripId } = req.params;
     const trip = await Trip.findById(tripId);
@@ -220,7 +220,7 @@ export const getTripById = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getAllTrips = async (req: AuthRequest, res: Response) => {
+export const getAllTrips = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 8;
