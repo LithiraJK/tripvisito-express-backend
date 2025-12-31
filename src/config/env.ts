@@ -20,7 +20,9 @@ interface EnvConfig {
   CLOUDINARY_API_SCRET: string;
   GEMINI_API_KEY: string;
   UNSPLASH_ACCESS_KEY: string;
-  
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  CLIENT_URL: string;
 }
 
 export const env: EnvConfig = {
@@ -41,7 +43,10 @@ export const env: EnvConfig = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
   CLOUDINARY_API_SCRET: process.env.CLOUDINARY_API_SCRET || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
-  UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY || ""
+  UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY || "",
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+  CLIENT_URL: process.env.CLIENT_URL || ""
 };
 
 // Validate required env vars on startup
