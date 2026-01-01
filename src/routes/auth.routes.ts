@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addNewUser, deleteUser, getAllUsers, getMyProfile, loginUser, refreshToken, registerAdmin, registerUser, updateUserStatus } from "../controllers/auth.controller";
+import { addNewUser, deleteUser, getAllUsers, getMyProfile, googleLogin, loginUser, refreshToken, registerAdmin, registerUser, updateUserStatus } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
@@ -11,6 +11,8 @@ const router = Router();
 router.post("/register" , registerUser)
 
 router.post("/login", loginUser)
+
+router.post("/google-login", googleLogin);
 
 router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
 
@@ -25,5 +27,6 @@ router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN]), uplo
 router.put("/status/:id" , authenticate, requireRole([Role.ADMIN]) , updateUserStatus)
 
 router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN]) , deleteUser )
+
 
 export default router;
