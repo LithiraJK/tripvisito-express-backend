@@ -10,6 +10,7 @@ import { handleStripeWebhook } from "./middlewares/webhook.middleware";
 import http from "http";
 import { Server } from "socket.io";
 import chatRouter from "./routes/chat.routes";
+import { initializeSocketService } from "./services/socket.service";
 
 
 const app = express();
@@ -29,39 +30,17 @@ app.use(
   })
 )
 
-// Socket.io සබඳතාවය සැකසීම
 const io = new Server(server, {
-  cors: {
-    origin: [env.CORS_ORIGIN],
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: [env.CORS_ORIGIN] }
 });
 
-// Socket Events හැසිරවීම
-io.on("connection", (socket) => {
-  console.log(`User Connected: ${socket.id}`);
+initializeSocketService(io);
 
-  // පරිශීලකයා සහ Admin අතර room එකක් සෑදීම (Trip ID එක හෝ User ID එක පාවිච්චි කරන්න පුළුවන්)
-  socket.on("join_chat", (userId) => {
-    socket.join(userId);
-    console.log(`User with ID: ${userId} joined chat`);
-  });
-
-  // පණිවිඩයක් ලැබුණු විට
-  socket.on("send_message", (data) => {
-    // දත්ත: { room: userId, message: "hello", sender: "USER" }
-    socket.to(data.room).emit("receive_message", data);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User Disconnected", socket.id);
-  });
-});
-
+// ... Routes ...
 app.use("/api/v1/auth" , authRouter );
 app.use("/api/v1/trip" , tripRouter);
 app.use("/api/v1/payment" ,paymentRouter);
-app.use("aai/v1/chat" , chatRouter);
+app.use("/api/v1/chat" , chatRouter);
 
 mongoose
   .connect(env.MONGODB_URI)
