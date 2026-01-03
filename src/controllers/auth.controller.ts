@@ -6,7 +6,7 @@ import {
   signAccessToken,
   signRefreshToken,
 } from "../utils/jwt.util";
-import { sendSuccess, sendError } from "../services/api.response.util";
+import { sendSuccess, sendError } from "../utils/api.response.util";
 import { env } from "../config/env";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import jwt from "jsonwebtoken";

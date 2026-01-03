@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
 import { Role } from "../models/user.model";
 import { AuthRequest } from "./auth.middleware";
-import { sendError } from "../services/api.response.util";
+import { sendError } from "../utils/api.response.util";
 
 export const requireRole = (roles: Role[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import axios from "axios";
 import { env } from "../config/env";
-import { sendError, sendSuccess } from "../services/api.response.util";
+import { sendError, sendSuccess } from "../utils/api.response.util";
 import { Trip } from "../models/trip.model";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import cloudinary from "../config/cloudinary";
