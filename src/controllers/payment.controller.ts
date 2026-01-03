@@ -42,17 +42,15 @@ export const createCheckoutSession = async (
       },
     });
 
-    // 2. අපේ Database එකේ 'PENDING' Payment එකක් නිර්මාණය කිරීම
     await Payment.create({
       tripId: tripId,
       userId: userId,
       amount: amount,
       status: "PENDING",
       isPaid: false,
-      stripeSessionId: session.id, // Webhook එකට මේ ID එක ගොඩක් වැදගත්
+      stripeSessionId: session.id, 
     });
 
-    // 3. Session URL එක Frontend එකට යැවීම
     res.status(200).json({ url: session.url });
   } catch (error: any) {
     console.error("Stripe Session Error:", error);

@@ -23,6 +23,9 @@ interface EnvConfig {
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   CLIENT_URL: string;
+  EMAIL_SERVICE: string;
+  EMAIL_USER: string;
+  EMAIL_APP_PASSWORD: string;
 }
 
 export const env: EnvConfig = {
@@ -46,7 +49,10 @@ export const env: EnvConfig = {
   UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY || "",
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
-  CLIENT_URL: process.env.CLIENT_URL || ""
+  CLIENT_URL: process.env.CLIENT_URL || "",
+  EMAIL_SERVICE: process.env.EMAIL_SERVICE || "",
+  EMAIL_USER: process.env.EMAIL_USER || "",
+  EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD || "",
 };
 
 // Validate required env vars on startup
