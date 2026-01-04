@@ -3,6 +3,7 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import Stripe from "stripe";
 import { Payment } from "../models/payment.model";
 import { env } from "../config/env";
+import { sendError, sendSuccess } from "../utils/api.response.util";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY!);
 
@@ -12,7 +13,10 @@ export const createCheckoutSession = async (
 ) => {
   try {
     const { tripId, tripName, tripImage, tripDescription, amount } = req.body;
+    
     const userId = req.user?.sub;
+    const userName = req.user?.name || "Customer"; 
+
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
     }
@@ -38,7 +42,9 @@ export const createCheckoutSession = async (
       cancel_url: `${env.CLIENT_URL}/trip/${tripId}`,
       metadata: {
         userId: userId.toString(),
+        userName: userName,
         tripId: tripId,
+        tripName: tripName,
       },
     });
 
@@ -58,4 +64,23 @@ export const createCheckoutSession = async (
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
   }
+};
+
+export const getMyBookings = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.sub;
+
+        // Fetch payments and 'populate' the trip information
+        const bookings = await Payment.find({ userId })
+            .populate({
+                path: 'tripId',
+                select: 'tripDetails imageUrls' // Only get necessary fields
+            })
+            .sort({ createdAt: -1 });
+
+        sendSuccess(res, 200, "User bookings retrieved", bookings);
+    } catch (error) {
+        console.error("Fetch Bookings Error:", error);
+        sendError(res, 500, "Failed to fetch your bookings");
+    }
 };

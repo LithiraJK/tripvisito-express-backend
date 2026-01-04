@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { Payment } from '../models/payment.model';
+import { Notification } from '../models/notification.model';
 import { env } from '../config/env';
 import { sendEmail } from '../services/mail.service'; 
 import { bookingSuccessTemplate } from '../utils/email.template'; 
@@ -24,7 +25,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         const session = event.data.object as Stripe.Checkout.Session;
 
         try {
-
             await Payment.findOneAndUpdate(
                 { stripeSessionId: session.id },
                 {
@@ -37,11 +37,23 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
             console.log("Payment updated in DB for session:", session.id);
 
             const userEmail = session.customer_details?.email;
+            const userId = session.metadata?.userId;
             const userName = session.metadata?.userName || "Traveler";
             const tripName = session.metadata?.tripName || "your adventure";
             const amount = (session.amount_total || 0) / 100;
 
-            // 3. Trigger Email Notification (Asynchronous)
+            if (userId) {
+                await Notification.create({
+                    userId: userId,
+                    title: "Booking Confirmed! ✈️",
+                    message: `Payment successful for ${tripName}. Pack your bags!`,
+                    type: "PAYMENT",
+                    isRead: false
+                });
+                console.log(`Internal notification created for user: ${userId}`);
+            }
+
+            // 4. Trigger Email Notification
             if (userEmail) {
                 const htmlContent = bookingSuccessTemplate(userName, tripName, amount);
                 

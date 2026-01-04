@@ -1,6 +1,6 @@
 export const bookingSuccessTemplate = (name: string, trip: string, amount: number) => `
   <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-    <div style="background-color: #1877F2 color: white; padding: 20px; text-align: center;">
+    <div style="background-color: #1877F2; color: white; padding: 20px; text-align: center;">
       <h1 style="margin: 0; font-size: 24px;">Tripvisito</h1>
     </div>
     <div style="padding: 30px;">

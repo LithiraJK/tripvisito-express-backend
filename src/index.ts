@@ -10,6 +10,8 @@ import { handleStripeWebhook } from "./middlewares/webhook.middleware";
 import http from "http";
 import { Server } from "socket.io";
 import chatRouter from "./routes/chat.routes";
+import notificationRouter from "./routes/notification.routes"
+import reviewRouter from "./routes/review.routes";
 import { initializeSocketService } from "./services/socket.service";
 
 
@@ -41,6 +43,8 @@ app.use("/api/v1/auth" , authRouter );
 app.use("/api/v1/trip" , tripRouter);
 app.use("/api/v1/payment" ,paymentRouter);
 app.use("/api/v1/chat" , chatRouter);
+app.use("/api/v1/notifications" , notificationRouter)
+app.use("/api/v1/reviews" , reviewRouter);
 
 mongoose
   .connect(env.MONGODB_URI)

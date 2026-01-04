@@ -1,6 +1,6 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-export interface IChat {
+export interface IChat extends Document {
     _id: mongoose.Types.ObjectId;
     roomId: string;
     sender: mongoose.Types.ObjectId;
