@@ -260,35 +260,29 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
   try {
     const { email, name, profileimg } = req.body;
 
-    // 1. පරිශීලකයා Database එකේ ඉන්නවාදැයි පරීක්ෂා කිරීම
     let user = await User.findOne({ email });
 
     if (user) {
-      // පරිශීලකයා සිටී නම්, Google වෙතින් ලැබෙන අලුත්ම තොරතුරු update කරන්න
       user.name = name;
       user.profileimg = profileimg;
-      // මීට පෙර Local ලොග් වූ අයෙක් නම්, Provider එක GOOGLE ලෙස update කරන්න
       user.authProvider = AuthProvider.GOOGLE; 
       await user.save();
     } else {
-      // 2. පරිශීලකයා නොමැති නම් අලුතින් account එකක් සාදන්න
       user = await User.create({
         email,
         name,
         profileimg,
-        roles: [Role.USER], // Default role එක
+        roles: [Role.USER],
         authProvider: AuthProvider.GOOGLE,
         isBlock: false,
       });
     }
 
-    // 3. User block කර ඇත්නම් පරීක්ෂා කිරීම
     if (user.isBlock) {
       sendError(res, 403, "User is blocked");
       return;
     }
 
-    // 4. Tokens නිර්මාණය කිරීම (ඔබේ පවතින utils භාවිතා කරමින්)
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
 

@@ -22,6 +22,68 @@ export function parseMarkdownToJSON(markdownString: string): any {
   return null;
 }
 
+// Helper function to safely parse tripDetails and normalize data types
+function safeParseTripDetails(tripDetails: any): any {
+  let parsed: any;
+  
+  if (typeof tripDetails === 'string') {
+    try {
+      parsed = JSON.parse(tripDetails);
+    } catch (error) {
+      console.error("Error parsing tripDetails string:", error);
+      return null;
+    }
+  } else {
+    parsed = tripDetails;
+  }
+  
+  // Normalize common string fields to ensure they are strings
+  if (parsed && typeof parsed === 'object') {
+    // Ensure string fields are actually strings
+    const stringFields = ['name', 'description', 'budget', 'travelStyle', 'country', 'groupType', 'estimatedPrice'];
+    stringFields.forEach(field => {
+      if (parsed[field] !== undefined && parsed[field] !== null && typeof parsed[field] !== 'string') {
+        parsed[field] = String(parsed[field]);
+      }
+    });
+    
+    // Ensure array fields are arrays
+    const arrayFields = ['interests', 'bestTimeToVisit', 'weatherInfo'];
+    arrayFields.forEach(field => {
+      if (parsed[field] !== undefined && parsed[field] !== null && !Array.isArray(parsed[field])) {
+        parsed[field] = [parsed[field]];
+      }
+    });
+    
+    // Ensure duration is a number
+    if (parsed.duration !== undefined && typeof parsed.duration !== 'number') {
+      parsed.duration = parseInt(parsed.duration) || 0;
+    }
+    
+    // Normalize nested location object if it exists
+    if (parsed.location && typeof parsed.location === 'object') {
+      if (parsed.location.city && typeof parsed.location.city !== 'string') {
+        parsed.location.city = String(parsed.location.city);
+      }
+      if (parsed.location.openStreetMap && typeof parsed.location.openStreetMap !== 'string') {
+        parsed.location.openStreetMap = String(parsed.location.openStreetMap);
+      }
+    }
+    
+    // Normalize itinerary array
+    if (parsed.itinerary && Array.isArray(parsed.itinerary)) {
+      parsed.itinerary = parsed.itinerary.map((day: any) => {
+        if (day.location && typeof day.location !== 'string') {
+          day.location = String(day.location);
+        }
+        return day;
+      });
+    }
+  }
+  
+  return parsed;
+}
+
 export const generateTrip = async (req: AuthRequest, res: Response) => {
   try {
     const {
@@ -34,12 +96,14 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       maxToken,
     } = req.body;
 
+    // Ensure interests is always an array
+    const interestsArray = Array.isArray(interests) ? interests : [interests];
 
     const prompt = `
 Generate a ${duration}-day travel itinerary for ${country} based on the following user information.
 
 Budget: ${budget}
-Interests: ${interests}
+Interests: ${JSON.stringify(interestsArray)}
 TravelStyle: ${travelStyle}
 GroupType: ${groupType}
 
@@ -59,7 +123,7 @@ JSON STRUCTURE:
   "budget": "${budget}",
   "travelStyle": "${travelStyle}",
   "country": "${country}",
-  "interests": ${interests},
+  "interests": ${JSON.stringify(interestsArray)},
   "groupType": "${groupType}",
   "bestTimeToVisit": [
     "🌸 Spring (from month to month): reason",
@@ -102,7 +166,7 @@ JSON STRUCTURE:
           },
         ],
         generationConfig: {
-          maxOutputTokens: maxToken || 2500,
+          maxOutputTokens: maxToken || 8000,
         },
       },
       {
@@ -208,10 +272,16 @@ export const getTripById = async (req: Request, res: Response) => {
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
+    
+    const parsedDetails = safeParseTripDetails(trip.tripDetails);
+    if (!parsedDetails) {
+      return sendError(res, 500, "Invalid trip data format");
+    }
+    
     sendSuccess(res, 200, "Trip retrieved successfully", {
       trip: {
         ...trip.toObject(),
-        tripDetails: JSON.parse(trip.tripDetails),
+        tripDetails: parsedDetails,
       },
     });
   } catch (error) {
@@ -235,9 +305,10 @@ export const getAllTrips = async (req: Request, res: Response) => {
     const total = await Trip.countDocuments();
 
     const tripCards = trips.map((trip) => {
+      const parsedDetails = safeParseTripDetails(trip.tripDetails);
       return {
         id: trip._id.toString(),
-        tripDetails: JSON.parse(trip.tripDetails),
+        tripDetails: parsedDetails || {},
         imageUrls: trip.imageUrls,
       };
     });
@@ -303,14 +374,24 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const parsedTripDetails = typeof tripDetails === 'string' 
-      ? tripDetails 
-      : JSON.stringify(tripDetails);
+    // Ensure tripDetails is always stored as a string
+    let tripDetailsToStore: string;
+    if (typeof tripDetails === 'string') {
+      // Validate it's valid JSON
+      try {
+        JSON.parse(tripDetails);
+        tripDetailsToStore = tripDetails;
+      } catch {
+        return sendError(res, 400, "Invalid trip details format");
+      }
+    } else {
+      tripDetailsToStore = JSON.stringify(tripDetails);
+    }
 
     const updatedTrip = await Trip.findByIdAndUpdate(
       tripId,
       {
-        tripDetails: parsedTripDetails,
+        tripDetails: tripDetailsToStore,
         imageUrls: imageURLs,
       },
       { new: true }
@@ -320,10 +401,15 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
       return sendError(res, 500, "Failed to update the trip");
     }
 
+    const parsedDetails = safeParseTripDetails(updatedTrip.tripDetails);
+    if (!parsedDetails) {
+      return sendError(res, 500, "Invalid trip data format after update");
+    }
+
     sendSuccess(res, 200, "Trip updated successfully", {
       trip: {
         ...updatedTrip.toObject(),
-        tripDetails: JSON.parse(updatedTrip.tripDetails),
+        tripDetails: parsedDetails,
       },
     });
   } catch (error) {
@@ -352,9 +438,10 @@ export const getTripsByUser = async (req: AuthRequest, res: Response) => {
     const total = await Trip.countDocuments({ userId: userId });
 
     const tripCards = trips.map(trip => {
+      const parsedDetails = safeParseTripDetails(trip.tripDetails);
       return {
         id: trip._id.toString(),
-        tripDetails: JSON.parse(trip.tripDetails),
+        tripDetails: parsedDetails || {},
         imageUrls: trip.imageUrls
       };
     });

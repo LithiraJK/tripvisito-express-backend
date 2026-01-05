@@ -14,19 +14,19 @@ router.post("/login", loginUser)
 
 router.post("/google-login", googleLogin);
 
-router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
-
 router.get("/me" , authenticate , getMyProfile)
-
-router.get("/users" , authenticate , requireRole([Role.ADMIN]), getAllUsers )
 
 router.post("/refresh" , refreshToken)
 
-router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN]), upload.single("profileimg") , addNewUser)
+router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
 
-router.put("/status/:id" , authenticate, requireRole([Role.ADMIN]) , updateUserStatus)
+router.get("/users" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]), getAllUsers )
 
-router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN]) , deleteUser )
+router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]), upload.single("profileimg") , addNewUser)
+
+router.put("/status/:id" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]) , updateUserStatus)
+
+router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]) , deleteUser )
 
 
 export default router;
