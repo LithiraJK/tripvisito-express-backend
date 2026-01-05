@@ -38,6 +38,10 @@ const io = new Server(server, {
 
 initializeSocketService(io);
 
+app.get("/", (req, res) => {
+  res.send("Backend is running...")
+})
+
 // ... Routes ...
 app.use("/api/v1/auth" , authRouter );
 app.use("/api/v1/trip" , tripRouter);
@@ -56,6 +60,8 @@ mongoose
     console.error("Error connecting to MongoDB:", error);
     process.exit(1);
   });
+
+
   
 
 server.listen(process.env.PORT, () => {
