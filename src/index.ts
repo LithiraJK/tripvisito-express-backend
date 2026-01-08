@@ -38,7 +38,7 @@ const io = new Server(server, {
     origin: env.CORS_ORIGIN,
     credentials: true
    },
-   transports: ['websocket', 'polling'],
+   transports: ['websocket'],
 });
 
 initializeSocketService(io);
