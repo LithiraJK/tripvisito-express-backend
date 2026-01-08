@@ -1,14 +1,15 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import Stripe from 'stripe';
 import { Payment } from '../models/payment.model';
 import { Notification } from '../models/notification.model';
 import { env } from '../config/env';
 import { sendEmail } from '../services/mail.service'; 
 import { bookingSuccessTemplate } from '../utils/email.template'; 
+import { AuthRequest } from './auth.middleware';
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY!);
 
-export const handleStripeWebhook = async (req: Request, res: Response) => {
+export const handleStripeWebhook = async (req: AuthRequest, res: Response) => {
     const sig = req.headers['stripe-signature'] as string;
     const endpointSecret = env.STRIPE_WEBHOOK_SECRET!;
 
