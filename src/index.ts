@@ -69,9 +69,9 @@ mongoose
 
   
 
-server.listen(process.env.PORT, () => {
+server.listen(env.PORT, () => {
   console.log(
-    `Server is running on http://${env.HOST}`
+    `Server is running on http://${env.HOST}:${env.PORT}`
   );
 });
 
