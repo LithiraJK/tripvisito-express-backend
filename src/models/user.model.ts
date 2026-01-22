@@ -19,8 +19,9 @@ export interface IUser extends Document {
   roles: Role[];
   isBlock: boolean;
   profileimg?: string;
-  authProvider: AuthProvider; 
+  authProvider: AuthProvider;
   joinedAt: Date;
+  lastLogin: Date;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -67,8 +68,12 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Date,
       default: Date.now,
     },
+    lastLogin: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const User = mongoose.model<IUser>("User", userSchema);

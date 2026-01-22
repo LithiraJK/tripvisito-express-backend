@@ -13,7 +13,7 @@ import chatRouter from "./routes/chat.routes";
 import notificationRouter from "./routes/notification.routes"
 import reviewRouter from "./routes/review.routes";
 import { initializeSocketService } from "./services/socket.service";
-
+import statsRouter from "./routes/stats.routes";
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +54,7 @@ app.use("/api/v1/payment" ,paymentRouter);
 app.use("/api/v1/chat" , chatRouter);
 app.use("/api/v1/notifications" , notificationRouter)
 app.use("/api/v1/reviews" , reviewRouter);
+app.use("/api/v1/dashboard", statsRouter);
 
 mongoose
   .connect(env.MONGODB_URI)
