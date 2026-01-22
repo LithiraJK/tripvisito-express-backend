@@ -36,6 +36,7 @@ app.use(
 const io = new Server(server, {
   cors: { 
     origin: env.CORS_ORIGIN,
+    methods: ["GET", "POST"],
     credentials: true
    },
    transports: ['websocket'],

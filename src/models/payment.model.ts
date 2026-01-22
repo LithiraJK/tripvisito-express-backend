@@ -6,8 +6,8 @@ export interface IPayment extends Document {
     paymentDate?: Date;
     status: "CONFIRMED" | "CANCELLED" | "PENDING";
     isPaid: boolean;
-    stripeSessionId?: string;    // To find the booking during webhook
-    paymentIntentId?: string;    // For refunds or tracking in Stripe dashboard
+    stripeSessionId?: string;    
+    paymentIntentId?: string;   
     amount: number;
 }
 

@@ -4,6 +4,7 @@ import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
 import { upload } from "../middlewares/upload.middleware";
+import { getLatestUserSignups } from "../controllers/stats.controller";
 
 
 const router = Router();
@@ -27,6 +28,9 @@ router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN , Role.
 router.put("/status/:id" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]) , updateUserStatus)
 
 router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]) , deleteUser )
+
+router.get("/latest-users", authenticate, getLatestUserSignups)
+
 
 
 export default router;
