@@ -60,16 +60,35 @@
 
 ## ⚙️ Setup and Run Instructions for Developers
 
-### Backend Setup
-1. `cd backend`
-2. `npm install`
-3. Create a `.env` file with `MONGO_URI`, `JWT_SECRET`, and `STRIPE_SECRET_KEY`.
-4. `npm run dev`
+### Option 1: Docker (Recommended)
+```bash
+# 1. Copy and configure environment
+copy .env.example .env
+# Edit .env with your MongoDB Atlas URI and API keys
+
+# 2. Build and run with Docker
+docker-compose up -d
+
+# 3. View logs
+docker-compose logs -f
+
+# 4. Stop services
+docker-compose down
+```
+
+Backend will be available at `http://localhost:5000`
+
+📖 **[See detailed Docker guide](DOCKER.md)**
+
+### Option 2: Local Development
+1. `npm install`
+2. Create a `.env` file with `MONGODB_URI`, `JWT_SECRET`, and other required keys.
+3. `npm run dev` (development) or `npm start` (production)
 
 ### Frontend Setup
-1. `cd frontend`
+1. `cd ../tripvisito-frontend` (if you have the frontend repo)
 2. `npm install`
-3. Create a `.env` file with `VITE_API_BASE_URL`.
+3. Create a `.env` file with `VITE_API_BASE_URL=http://localhost:5000`
 4. `npm run dev`
 
 ---
