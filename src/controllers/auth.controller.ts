@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { AuthProvider, Role, User } from "../models/user.model";
 import { Request, Response } from "express";
 import {
@@ -12,6 +13,8 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import jwt from "jsonwebtoken";
 import { IUser } from "../models/user.model";
 import cloudinary from "../config/cloudinary";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const createSuperAdmin = async () => {
   try {
@@ -40,19 +43,25 @@ export const createSuperAdmin = async () => {
 export const addNewUser = async (
   req: AuthRequest,
   res: Response
-): Promise<void> => {
+): Promise<any> => {
   try {
     const { email, name, password, roles } = req.body;
     let imageURL = "";
 
-    console.log("Request body:", req.body);
-    console.log("Roles received:", roles, "Type:", typeof roles);
+    if (!email || !EMAIL_REGEX.test(email.trim())) {
+      return sendError(res, 400, "Please provide a valid email address");
+    }
+    if (!name || name.trim().length < 2) {
+      return sendError(res, 400, "Name must be at least 2 characters long");
+    }
+    if (!password || password.length < 6) {
+      return sendError(res, 400, "Password must be at least 6 characters long");
+    }
 
-    const existUser = await User.findOne({ email });
+    const existUser = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (existUser) {
-      sendError(res, 400, "User already exists with this email");
-      return;
+      return sendError(res, 400, "User already exists with this email");
     }
 
     if (req.file) {
@@ -84,20 +93,19 @@ export const addNewUser = async (
     } else if (Array.isArray(roles)) {
       userRoles = roles;
     } else {
-      userRoles = [roles as Role];
+      userRoles = [roles as Role || Role.USER];
     }
-    console.log("User roles after conversion:", userRoles);
 
     const newUser = await User.create({
-      email: email,
-      name: name,
+      email: email.trim().toLowerCase(),
+      name: name.trim(),
       password: hashedPassword,
       roles: userRoles,
       isBlock: false,
       profileimg: imageURL,
     });
 
-    sendSuccess(res, 201, "User added successfully", {
+    return sendSuccess(res, 201, "User added successfully", {
       user: {
         id: newUser._id,
         email: newUser.email,
@@ -108,7 +116,7 @@ export const addNewUser = async (
     });
   } catch (error) {
     console.error("Error in addNewUser:", error);
-    sendError(
+    return sendError(
       res,
       500,
       "Internal Server Error",
@@ -117,33 +125,41 @@ export const addNewUser = async (
   }
 };
 
-
 export const registerUser = async (
   req: Request,
   res: Response
-): Promise<void> => {
+): Promise<any> => {
   try {
     const { email, name, password, profileimg } = req.body;
 
-    const existUser = await User.findOne({ email });
+    if (!email || !EMAIL_REGEX.test(email.trim())) {
+      return sendError(res, 400, "Please provide a valid email address");
+    }
+    if (!name || name.trim().length < 2) {
+      return sendError(res, 400, "Name must be at least 2 characters long");
+    }
+    if (!password || password.length < 6) {
+      return sendError(res, 400, "Password must be at least 6 characters long");
+    }
+
+    const existUser = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (existUser) {
-      sendError(res, 400, "User already exists with this email");
-      return;
+      return sendError(res, 400, "User already exists with this email");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
-      email: email,
-      name: name,
+      email: email.trim().toLowerCase(),
+      name: name.trim(),
       password: hashedPassword,
       roles: [Role.USER],
       isBlock: false,
-      profileimg: profileimg,
+      profileimg: profileimg || undefined,
     });
 
-    sendSuccess(res, 201, "User registered successfully", {
+    return sendSuccess(res, 201, "User registered successfully", {
       user: {
         id: newUser._id,
         email: newUser.email,
@@ -153,7 +169,7 @@ export const registerUser = async (
       },
     });
   } catch (error) {
-    sendError(
+    return sendError(
       res,
       500,
       "Internal Server Error",
@@ -165,31 +181,37 @@ export const registerUser = async (
 export const registerAdmin = async (
   req: AuthRequest,
   res: Response
-): Promise<void> => {
+): Promise<any> => {
   try {
     const { email, name, password, profileimg } = req.body;
 
-    const existsAdmin = await User.findOne({ email });
+    if (!email || !EMAIL_REGEX.test(email.trim())) {
+      return sendError(res, 400, "Please provide a valid email address");
+    }
+    if (!password || password.length < 6) {
+      return sendError(res, 400, "Password must be at least 6 characters long");
+    }
+
+    const existsAdmin = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (existsAdmin) {
-      sendError(res, 400, "Admin already exists!");
-      return;
+      return sendError(res, 400, "Admin already exists with this email!");
     }
 
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     const newAdmin = await User.create({
-      email: email,
-      name: name,
+      email: email.trim().toLowerCase(),
+      name: name.trim(),
       password: hashedPassword,
       roles: [Role.ADMIN],
       isBlock: false,
-      profileimg: profileimg,
+      profileimg: profileimg || undefined,
     });
 
     const token = signAccessToken(newAdmin);
 
-    sendSuccess(res, 201, "Admin created successfully!", {
+    return sendSuccess(res, 201, "Admin created successfully!", {
       token,
       user: {
         id: newAdmin._id,
@@ -200,7 +222,7 @@ export const registerAdmin = async (
       },
     });
   } catch (error) {
-    sendError(
+    return sendError(
       res,
       500,
       "Internal Server Error",
@@ -209,33 +231,37 @@ export const registerAdmin = async (
   }
 };
 
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+export const loginUser = async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
 
-    const existUser = await User.findOne({ email });
+    if (!email || !password) {
+      return sendError(res, 400, "Please provide email and password");
+    }
+
+    const existUser = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!existUser) {
-      sendError(res, 401, "Invalid credentials");
-      return;
+      return sendError(res, 401, "Invalid credentials");
     }
 
     const isPasswordValid = await bcrypt.compare(password, existUser.password || "");
 
     if (!isPasswordValid) {
-      sendError(res, 401, "Invalid credentials");
-      return;
+      return sendError(res, 401, "Invalid credentials");
     }
 
     if (existUser.isBlock) {
-      sendError(res, 403, "User is blocked");
-      return;
+      return sendError(res, 403, "User account is blocked. Please contact support.");
     }
+
+    existUser.lastLogin = new Date();
+    await existUser.save();
 
     const accessToken = signAccessToken(existUser);
     const refreshToken = signRefreshToken(existUser);
 
-    sendSuccess(res, 200, "User logged in successfully", {
+    return sendSuccess(res, 200, "User logged in successfully", {
       accessToken: accessToken,
       refreshToken: refreshToken,
       user: {
@@ -243,10 +269,11 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         email: existUser.email,
         name: existUser.name,
         roles: existUser.roles,
+        profileimg: existUser.profileimg,
       },
     });
   } catch (error) {
-    sendError(
+    return sendError(
       res,
       500,
       "Internal Server Error",
@@ -255,38 +282,42 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
-export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+export const googleLogin = async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, name, profileimg } = req.body;
 
-    let user = await User.findOne({ email });
+    if (!email || !EMAIL_REGEX.test(email.trim())) {
+      return sendError(res, 400, "Valid email is required for Google login");
+    }
+
+    let user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (user) {
-      user.name = name;
-      user.profileimg = profileimg;
-      user.authProvider = AuthProvider.GOOGLE; 
+      // Check block status before performing updates
+      if (user.isBlock) {
+        return sendError(res, 403, "User account is blocked. Please contact support.");
+      }
+      user.name = name || user.name;
+      if (profileimg) user.profileimg = profileimg;
+      user.authProvider = AuthProvider.GOOGLE;
+      user.lastLogin = new Date();
       await user.save();
     } else {
       user = await User.create({
-        email,
-        name,
-        profileimg,
+        email: email.trim().toLowerCase(),
+        name: name || "Google User",
+        profileimg: profileimg || undefined,
         roles: [Role.USER],
         authProvider: AuthProvider.GOOGLE,
         isBlock: false,
+        lastLogin: new Date(),
       });
-    }
-
-    if (user.isBlock) {
-      sendError(res, 403, "User is blocked");
-      return;
     }
 
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
 
-    sendSuccess(res, 200, "Google login successful", {
+    return sendSuccess(res, 200, "Google login successful", {
       accessToken,
       refreshToken,
       user: {
@@ -299,7 +330,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     console.error("Error in googleLogin:", error);
-    sendError(res, 500, "Google authentication failed", error instanceof Error ? error.message : "");
+    return sendError(res, 500, "Google authentication failed", error instanceof Error ? error.message : "");
   }
 };
 
@@ -310,29 +341,29 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
   const user = await User.findById(req.user.sub).select("-password");
 
   if (!user) {
-    return sendError(res, 403, "User not found");
+    return sendError(res, 404, "User not found");
   }
 
   const { email, roles, name, _id, profileimg } = user as IUser;
 
-  sendSuccess(res, 200, "ok", { id: _id, email, name, roles, profileimg });
+  return sendSuccess(res, 200, "ok", { id: _id, email, name, roles, profileimg });
 };
 
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 4;
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 4, 1), 50);
     const skip = (page - 1) * limit;
 
     const users = await User.find()
-      .populate("email")
+      .select("-password")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
     const total = await User.countDocuments();
 
-    sendSuccess(res, 200, "Users Data fetch successfully !", {
+    return sendSuccess(res, 200, "Users Data fetch successfully !", {
       users: users,
       totalPages: Math.ceil(total / limit),
       totalCount: total,
@@ -340,7 +371,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Error retrieving users:", error);
-    sendError(res, 500, "Failed to retrieve users");
+    return sendError(res, 500, "Failed to retrieve users");
   }
 };
 
@@ -349,7 +380,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(401).json({ message: "Refresh token is required" });
+      return sendError(res, 401, "Refresh token is required");
     }
 
     // verify refresh token
@@ -359,17 +390,23 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     const user = (await User.findById(userId)) as IUser | null;
     if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return sendError(res, 401, "User not found or unauthorized");
+    }
+
+    if (user.isBlock) {
+      return sendError(res, 403, "User account is blocked");
     }
 
     const newAccessToken = signAccessToken(user);
 
-    sendSuccess(res, 200, "Token refreshed successfully", {
+    return sendSuccess(res, 200, "Token refreshed successfully", {
       accessToken: newAccessToken,
     });
-  } catch (error) {
-    console.error(error);
-    sendError(res, 500, "Invalid refresh token or Expired");
+  } catch (error: any) {
+    if (error.name === "TokenExpiredError") {
+      return sendError(res, 401, "Refresh token expired. Please login again.");
+    }
+    return sendError(res, 401, "Invalid refresh token");
   }
 };
 
@@ -378,8 +415,9 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
     const userId = req.params.id;
     const { isBlock } = req.body;
 
-    console.log("Updating user status - User ID:", userId);
-    console.log("New isBlock value:", isBlock, "Type:", typeof isBlock);
+    if (!mongoose.isValidObjectId(userId)) {
+      return sendError(res, 400, "Invalid User ID format");
+    }
 
     const user = await User.findById(userId);
 
@@ -387,16 +425,16 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
       return sendError(res, 404, "User not found");
     }
 
-    if(user.roles.includes(Role.ADMIN)) {
+    if (user.roles.includes(Role.SUPERADMIN)) {
       return sendError(res, 403, "Cannot change status of Super Admin");
     }
 
-    user.isBlock = isBlock;
+    user.isBlock = Boolean(isBlock);
     await user.save();
-    sendSuccess(res, 200, "User status updated successfully", { user });
+    return sendSuccess(res, 200, "User status updated successfully", { user });
   } catch (error) {
     console.error("Error in updateUserStatus:", error);
-    sendError(
+    return sendError(
       res,
       500,
       "Failed to update user status",
@@ -409,23 +447,25 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.params.id;
 
+    if (!mongoose.isValidObjectId(userId)) {
+      return sendError(res, 400, "Invalid User ID format");
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
       return sendError(res, 404, "User not found");
     }
 
-    if(user.roles.includes(Role.ADMIN)) {
-      return sendError(res, 403, "Cannot delete Admin users");
+    if (user.roles.includes(Role.SUPERADMIN)) {
+      return sendError(res, 403, "Cannot delete Super Admin users");
     }
 
     const deletedUser = await User.findByIdAndDelete(userId);
 
-    
-
-    sendSuccess(res, 200, "User deleted successfully", { user: deletedUser });
+    return sendSuccess(res, 200, "User deleted successfully", { user: deletedUser });
   } catch (error) {
-    sendError(
+    return sendError(
       res,
       500,
       "Failed to delete user",

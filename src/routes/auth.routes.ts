@@ -1,36 +1,83 @@
 import { Router } from "express";
-import { addNewUser, deleteUser, getAllUsers, getMyProfile, googleLogin, loginUser, refreshToken, registerAdmin, registerUser, updateUserStatus } from "../controllers/auth.controller";
+import rateLimit from "express-rate-limit";
+import {
+  addNewUser,
+  deleteUser,
+  getAllUsers,
+  getMyProfile,
+  googleLogin,
+  loginUser,
+  refreshToken,
+  registerAdmin,
+  registerUser,
+  updateUserStatus,
+} from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
 import { upload } from "../middlewares/upload.middleware";
 import { getLatestUserSignups } from "../controllers/stats.controller";
 
-
 const router = Router();
 
-router.post("/register" , registerUser)
+// Rate limiting for auth endpoints (SEC-02)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 auth requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    message: "Too many requests from this IP, please try again after 15 minutes.",
+  },
+});
 
-router.post("/login", loginUser)
+router.post("/register", authLimiter, registerUser);
 
-router.post("/google-login", googleLogin);
+router.post("/login", authLimiter, loginUser);
 
-router.get("/me" , authenticate , getMyProfile)
+router.post("/google-login", authLimiter, googleLogin);
 
-router.post("/refresh" , refreshToken)
+router.get("/me", authenticate, getMyProfile);
 
-router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
+router.post("/refresh", refreshToken);
 
-router.get("/users" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]), getAllUsers )
+router.post(
+  "/register/admin",
+  authenticate,
+  requireRole([Role.SUPERADMIN]),
+  registerAdmin
+);
 
-router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]), upload.single("profileimg") , addNewUser)
+router.get(
+  "/users",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  getAllUsers
+);
 
-router.put("/status/:id" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]) , updateUserStatus)
+router.post(
+  "/register/new-user",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  upload.single("profileimg"),
+  addNewUser
+);
 
-router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]) , deleteUser )
+router.put(
+  "/status/:id",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  updateUserStatus
+);
 
-router.get("/latest-users", authenticate, getLatestUserSignups)
+router.delete(
+  "/delete/:id",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  deleteUser
+);
 
-
+router.get("/latest-users", authenticate, getLatestUserSignups);
 
 export default router;

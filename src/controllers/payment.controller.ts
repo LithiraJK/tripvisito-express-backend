@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import Stripe from "stripe";
 import { Payment } from "../models/payment.model";
@@ -10,15 +11,24 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY!);
 export const createCheckoutSession = async (
   req: AuthRequest,
   res: Response
-) => {
+): Promise<any> => {
   try {
     const { tripId, tripName, tripImage, tripDescription, amount } = req.body;
-    
+
     const userId = req.user?.sub;
-    const userName = req.user?.name || "Customer"; 
+    const userName = req.user?.name || "Customer";
 
     if (!userId) {
-      return res.status(401).json({ message: "User not authenticated" });
+      return sendError(res, 401, "User not authenticated");
+    }
+
+    if (!tripId || !mongoose.isValidObjectId(tripId)) {
+      return sendError(res, 400, "A valid Trip ID is required");
+    }
+
+    const parsedAmount = Number(amount);
+    if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      return sendError(res, 400, "Payment amount must be greater than zero");
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -28,11 +38,11 @@ export const createCheckoutSession = async (
           price_data: {
             currency: "usd",
             product_data: {
-              name: tripName,
+              name: tripName || "Trip Booking",
               images: tripImage ? [tripImage] : [],
-              description: tripDescription,
+              description: tripDescription || "Travel booking via Tripvisito",
             },
-            unit_amount: amount * 100,
+            unit_amount: Math.round(parsedAmount * 100),
           },
           quantity: 1,
         },
@@ -43,44 +53,46 @@ export const createCheckoutSession = async (
       metadata: {
         userId: userId.toString(),
         userName: userName,
-        tripId: tripId,
-        tripName: tripName,
+        tripId: tripId.toString(),
+        tripName: tripName || "Trip Booking",
       },
     });
 
     await Payment.create({
       tripId: tripId,
       userId: userId,
-      amount: amount,
+      amount: parsedAmount,
       status: "PENDING",
       isPaid: false,
-      stripeSessionId: session.id, 
+      stripeSessionId: session.id,
     });
 
-    res.status(200).json({ url: session.url });
+    return res.status(200).json({ url: session.url });
   } catch (error: any) {
     console.error("Stripe Session Error:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    return sendError(res, 500, "Failed to create payment session", error.message);
   }
 };
 
-export const getMyBookings = async (req: AuthRequest, res: Response) => {
-    try {
-        const userId = req.user?.sub;
+export const getMyBookings = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    const userId = req.user?.sub;
 
-        // Fetch payments and 'populate' the trip information
-        const bookings = await Payment.find({ userId })
-            .populate({
-                path: 'tripId',
-                select: 'tripDetails imageUrls' // Only get necessary fields
-            })
-            .sort({ createdAt: -1 });
-
-        sendSuccess(res, 200, "User bookings retrieved", bookings);
-    } catch (error) {
-        console.error("Fetch Bookings Error:", error);
-        sendError(res, 500, "Failed to fetch your bookings");
+    if (!userId) {
+      return sendError(res, 401, "User not authenticated");
     }
+
+    // Fetch payments and 'populate' the trip information
+    const bookings = await Payment.find({ userId })
+      .populate({
+        path: "tripId",
+        select: "tripDetails imageUrls",
+      })
+      .sort({ createdAt: -1 });
+
+    return sendSuccess(res, 200, "User bookings retrieved", bookings);
+  } catch (error) {
+    console.error("Fetch Bookings Error:", error);
+    return sendError(res, 500, "Failed to fetch your bookings");
+  }
 };
