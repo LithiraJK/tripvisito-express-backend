@@ -30,7 +30,7 @@ interface EnvConfig {
 
 export const env: EnvConfig = {
   NODE_ENV: process.env.NODE_ENV || "development",
-  PORT: parseInt(process.env.PORT || "5000", 10),
+  PORT: parseInt(process.env.PORT || "5001", 10),
   HOST: process.env.HOST || "localhost",
   MONGODB_URI: process.env.MONGODB_URI || "",
   JWT_SECRET: process.env.JWT_SECRET || "",
