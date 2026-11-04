@@ -2,6 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import {
   addNewUser,
+  adminLogin,
   deleteUser,
   getAllUsers,
   getMyProfile,
@@ -32,9 +33,23 @@ const authLimiter = rateLimit({
   },
 });
 
+// Strict rate limiting for administrative portal (SEC-ADMIN)
+const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // strict: limit each IP to 5 admin login attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    message: "Too many admin login attempts from this IP. Please try again after 15 minutes.",
+  },
+});
+
 router.post("/register", authLimiter, registerUser);
 
 router.post("/login", authLimiter, loginUser);
+
+router.post("/admin-login", adminAuthLimiter, adminLogin);
 
 router.post("/google-login", authLimiter, googleLogin);
 

@@ -282,6 +282,75 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
+export const adminLogin = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return sendError(res, 400, "Please provide administrative email and password");
+    }
+
+    const existUser = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!existUser) {
+      return sendError(res, 401, "Invalid administrative credentials");
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, existUser.password || "");
+
+    if (!isPasswordValid) {
+      return sendError(res, 401, "Invalid administrative credentials");
+    }
+
+    // STRICT PRIVILEGE CHECK: Must have ADMIN or SUPERADMIN role
+    const hasAdminPrivilege =
+      existUser.roles.includes(Role.ADMIN) ||
+      existUser.roles.includes(Role.SUPERADMIN);
+
+    if (!hasAdminPrivilege) {
+      return sendError(
+        res,
+        403,
+        "Access Denied: This portal is restricted to authorized Administrators only."
+      );
+    }
+
+    if (existUser.isBlock) {
+      return sendError(
+        res,
+        403,
+        "Admin account is deactivated. Please contact Superadmin."
+      );
+    }
+
+    existUser.lastLogin = new Date();
+    await existUser.save();
+
+    const accessToken = signAccessToken(existUser);
+    const refreshToken = signRefreshToken(existUser);
+
+    return sendSuccess(res, 200, "Administrative authentication successful", {
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: {
+        id: existUser._id,
+        email: existUser.email,
+        name: existUser.name,
+        roles: existUser.roles,
+        profileimg: existUser.profileimg,
+      },
+    });
+  } catch (error) {
+    console.error("Error in adminLogin:", error);
+    return sendError(
+      res,
+      500,
+      "Internal Server Error",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  }
+};
+
 export const googleLogin = async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, name, profileimg } = req.body;
