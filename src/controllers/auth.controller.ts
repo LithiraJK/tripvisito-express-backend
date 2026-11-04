@@ -233,7 +233,7 @@ export const registerAdmin = async (
 
 export const loginUser = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return sendError(res, 400, "Please provide email and password");
@@ -271,12 +271,17 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
     existUser.lastLogin = new Date();
     await existUser.save();
 
+    const isRemember = Boolean(rememberMe);
     const accessToken = signAccessToken(existUser);
-    const refreshToken = signRefreshToken(existUser);
+    const refreshToken = signRefreshToken(existUser, isRemember);
+    const expiresInMs = isRemember ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + expiresInMs).toISOString();
 
     return sendSuccess(res, 200, "User logged in successfully", {
       accessToken: accessToken,
       refreshToken: refreshToken,
+      expiresAt: expiresAt,
+      rememberMe: isRemember,
       user: {
         id: existUser._id,
         email: existUser.email,
@@ -297,7 +302,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
 
 export const adminLogin = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return sendError(res, 400, "Please provide administrative email and password");
@@ -339,12 +344,17 @@ export const adminLogin = async (req: Request, res: Response): Promise<any> => {
     existUser.lastLogin = new Date();
     await existUser.save();
 
+    const isRemember = Boolean(rememberMe);
     const accessToken = signAccessToken(existUser);
-    const refreshToken = signRefreshToken(existUser);
+    const refreshToken = signRefreshToken(existUser, isRemember);
+    const expiresInMs = isRemember ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + expiresInMs).toISOString();
 
     return sendSuccess(res, 200, "Administrative authentication successful", {
       accessToken: accessToken,
       refreshToken: refreshToken,
+      expiresAt: expiresAt,
+      rememberMe: isRemember,
       user: {
         id: existUser._id,
         email: existUser.email,
@@ -410,11 +420,14 @@ export const googleLogin = async (req: Request, res: Response): Promise<any> => 
     }
 
     const accessToken = signAccessToken(user);
-    const refreshToken = signRefreshToken(user);
+    const refreshToken = signRefreshToken(user, true);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     return sendSuccess(res, 200, "Google login successful", {
       accessToken,
       refreshToken,
+      expiresAt,
+      rememberMe: true,
       user: {
         id: user._id,
         email: user.email,
@@ -479,9 +492,10 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     // verify refresh token
-    const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRECT);
+    const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRECT) as any;
 
-    const userId = (payload as JWTPayload).sub;
+    const userId = payload.sub;
+    const isRemember = payload.rememberMe ?? true;
 
     const user = (await User.findById(userId)) as IUser | null;
     if (!user) {
@@ -493,9 +507,15 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     const newAccessToken = signAccessToken(user);
+    const newRefreshToken = signRefreshToken(user, isRemember);
+    const expiresInMs = isRemember ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + expiresInMs).toISOString();
 
     return sendSuccess(res, 200, "Token refreshed successfully", {
       accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresAt: expiresAt,
+      rememberMe: isRemember,
     });
   } catch (error: any) {
     if (error.name === "TokenExpiredError") {
