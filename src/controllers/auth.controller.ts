@@ -255,6 +255,19 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
       return sendError(res, 403, "User account is blocked. Please contact support.");
     }
 
+    // SECURITY RESTRICTION: Block administrative accounts from public login
+    const isAdminAccount =
+      existUser.roles.includes(Role.ADMIN) ||
+      existUser.roles.includes(Role.SUPERADMIN);
+
+    if (isAdminAccount) {
+      return sendError(
+        res,
+        403,
+        "Access Denied: Administrative accounts cannot log in via the public portal. Please use the Staff & Admin Portal."
+      );
+    }
+
     existUser.lastLogin = new Date();
     await existUser.save();
 
@@ -362,6 +375,19 @@ export const googleLogin = async (req: Request, res: Response): Promise<any> => 
     let user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (user) {
+      // SECURITY RESTRICTION: Block administrative accounts from public Google login
+      const isAdminAccount =
+        user.roles.includes(Role.ADMIN) ||
+        user.roles.includes(Role.SUPERADMIN);
+
+      if (isAdminAccount) {
+        return sendError(
+          res,
+          403,
+          "Access Denied: Administrative accounts cannot authenticate via public Google login. Please use the Staff & Admin Portal."
+        );
+      }
+
       // Check block status before performing updates
       if (user.isBlock) {
         return sendError(res, 403, "User account is blocked. Please contact support.");
