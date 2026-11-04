@@ -5,6 +5,7 @@ import { env } from "../config/env";
 import { sendError, sendSuccess } from "../utils/api.response.util";
 import { Trip } from "../models/trip.model";
 import { AuthRequest } from "../middlewares/auth.middleware";
+import { Role } from "../models/user.model";
 import cloudinary from "../config/cloudinary";
 
 export function parseMarkdownToJSON(markdownString: string): any {
@@ -343,7 +344,11 @@ export const updateTrip = async (req: AuthRequest, res: Response): Promise<any> 
       return sendError(res, 404, "Trip not found");
     }
 
-    if (trip.userId.toString() !== req.user.sub) {
+    const isAdmin =
+      req.user.roles?.includes(Role.ADMIN) ||
+      req.user.roles?.includes(Role.SUPERADMIN);
+
+    if (trip.userId.toString() !== req.user.sub && !isAdmin) {
       return sendError(res, 403, "You don't have permission to update this trip");
     }
 
@@ -475,7 +480,11 @@ export const deleteTrip = async (req: AuthRequest, res: Response): Promise<any> 
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
-    if (trip.userId.toString() !== req.user.sub) {
+    const isAdmin =
+      req.user.roles?.includes(Role.ADMIN) ||
+      req.user.roles?.includes(Role.SUPERADMIN);
+
+    if (trip.userId.toString() !== req.user.sub && !isAdmin) {
       return sendError(res, 403, "You don't have permission to delete this trip");
     }
     await Trip.findByIdAndDelete(tripId);
