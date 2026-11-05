@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import axios from "axios";
 import { env } from "../config/env";
 import { sendError, sendSuccess } from "../utils/api.response.util";
 import { Trip } from "../models/trip.model";
 import { AuthRequest } from "../middlewares/auth.middleware";
+import { Role } from "../models/user.model";
 import cloudinary from "../config/cloudinary";
 
 export function parseMarkdownToJSON(markdownString: string): any {
@@ -39,7 +41,6 @@ function safeParseTripDetails(tripDetails: any): any {
   
   // Normalize common string fields to ensure they are strings
   if (parsed && typeof parsed === 'object') {
-    // Ensure string fields are actually strings
     const stringFields = ['name', 'description', 'budget', 'travelStyle', 'country', 'groupType', 'estimatedPrice'];
     stringFields.forEach(field => {
       if (parsed[field] !== undefined && parsed[field] !== null && typeof parsed[field] !== 'string') {
@@ -47,7 +48,6 @@ function safeParseTripDetails(tripDetails: any): any {
       }
     });
     
-    // Ensure array fields are arrays
     const arrayFields = ['interests', 'bestTimeToVisit', 'weatherInfo'];
     arrayFields.forEach(field => {
       if (parsed[field] !== undefined && parsed[field] !== null && !Array.isArray(parsed[field])) {
@@ -55,12 +55,10 @@ function safeParseTripDetails(tripDetails: any): any {
       }
     });
     
-    // Ensure duration is a number
     if (parsed.duration !== undefined && typeof parsed.duration !== 'number') {
       parsed.duration = parseInt(parsed.duration) || 0;
     }
     
-    // Normalize nested location object if it exists
     if (parsed.location && typeof parsed.location === 'object') {
       if (parsed.location.city && typeof parsed.location.city !== 'string') {
         parsed.location.city = String(parsed.location.city);
@@ -70,7 +68,6 @@ function safeParseTripDetails(tripDetails: any): any {
       }
     }
     
-    // Normalize itinerary array
     if (parsed.itinerary && Array.isArray(parsed.itinerary)) {
       parsed.itinerary = parsed.itinerary.map((day: any) => {
         if (day.location && typeof day.location !== 'string') {
@@ -84,7 +81,7 @@ function safeParseTripDetails(tripDetails: any): any {
   return parsed;
 }
 
-export const generateTrip = async (req: AuthRequest, res: Response) => {
+export const generateTrip = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const {
       country,
@@ -96,11 +93,20 @@ export const generateTrip = async (req: AuthRequest, res: Response) => {
       maxToken,
     } = req.body;
 
+    const parsedDuration = parseInt(duration);
+    if (!country || !travelStyle || !budget || !groupType) {
+      return sendError(res, 400, "All parameters (country, travelStyle, budget, groupType) are required");
+    }
+
+    if (isNaN(parsedDuration) || parsedDuration < 1 || parsedDuration > 10) {
+      return sendError(res, 400, "Duration must be between 1 and 10 days");
+    }
+
     // Ensure interests is always an array
     const interestsArray = Array.isArray(interests) ? interests : [interests];
 
     const prompt = `
-Generate a ${duration}-day travel itinerary for ${country} based on the following user information.
+Generate a ${parsedDuration}-day travel itinerary for ${country} based on the following user information.
 
 Budget: ${budget}
 Interests: ${JSON.stringify(interestsArray)}
@@ -112,14 +118,14 @@ IMPORTANT RULES:
 - Do NOT use markdown
 - Do NOT include explanations or extra text
 - All values must be valid JSON
-- itinerary must contain exactly ${duration} days
+- itinerary must contain exactly ${parsedDuration} days
 
 JSON STRUCTURE:
 {
   "name": "A descriptive title for the trip",
   "description": "Brief description under 100 words",
   "estimatedPrice": "Lowest average price in USD",
-  "duration": ${duration},
+  "duration": ${parsedDuration},
   "budget": "${budget}",
   "travelStyle": "${travelStyle}",
   "country": "${country}",
@@ -183,9 +189,6 @@ JSON STRUCTURE:
       aiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No data";
 
-    // const parsedContent = parseMarkdownToJSON(generatedContent);
-    // const parsedContent = generatedContent;
-
     let parsedContent;
     try {
       parsedContent = JSON.parse(generatedContent);
@@ -221,12 +224,6 @@ JSON STRUCTURE:
           }
         );
 
-        console.log(
-          "Unsplash API response:",
-          imageResponse.data.results?.length || 0,
-          "images found"
-        );
-
         imageUrls = imageResponse.data.results
           .map((img: any) => img.urls?.regular)
           .filter(
@@ -235,10 +232,6 @@ JSON STRUCTURE:
       }
     } catch (imageError: any) {
       console.error("Error fetching images from Unsplash:", imageError.message);
-      if (imageError.response) {
-        console.error("Unsplash API error details:", imageError.response.data);
-      }
-      // Continue without images rather than failing the entire request
       imageUrls = [];
     }
 
@@ -253,20 +246,26 @@ JSON STRUCTURE:
     if (!newTrip) {
       return sendError(res, 500, "Failed to save the trip");
     }
-    sendSuccess(res, 200, "Trip generated successfully", {
+
+    return sendSuccess(res, 200, "Trip generated successfully", {
       trip: parsedContent,
       tripId: newTrip.id,
       images: imageUrls,
     });
   } catch (error) {
     console.error("Error generating content:", error);
-    sendError(res, 500, "Failed to generate a trip");
+    return sendError(res, 500, "Failed to generate a trip");
   }
 };
 
-export const getTripById = async (req: Request, res: Response) => {
+export const getTripById = async (req: Request, res: Response): Promise<any> => {
   try {
     const { tripId } = req.params;
+
+    if (!tripId || !mongoose.isValidObjectId(tripId)) {
+      return sendError(res, 400, "Invalid Trip ID format");
+    }
+
     const trip = await Trip.findById(tripId);
 
     if (!trip) {
@@ -278,7 +277,7 @@ export const getTripById = async (req: Request, res: Response) => {
       return sendError(res, 500, "Invalid trip data format");
     }
     
-    sendSuccess(res, 200, "Trip retrieved successfully", {
+    return sendSuccess(res, 200, "Trip retrieved successfully", {
       trip: {
         ...trip.toObject(),
         tripDetails: parsedDetails,
@@ -286,14 +285,14 @@ export const getTripById = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error retrieving trip:", error);
-    sendError(res, 500, "Failed to retrieve the trip");
+    return sendError(res, 500, "Failed to retrieve the trip");
   }
 };
 
-export const getAllTrips = async (req: Request, res: Response) => {
+export const getAllTrips = async (req: Request, res: Response): Promise<any> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 8;
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 8, 1), 50);
     const skip = (page - 1) * limit;
 
     const trips = await Trip.find()
@@ -313,7 +312,7 @@ export const getAllTrips = async (req: Request, res: Response) => {
       };
     });
 
-    sendSuccess(res, 200, "Trips data", {
+    return sendSuccess(res, 200, "Trips data", {
       trips: tripCards,
       totalPages: Math.ceil(total / limit),
       totalCount: total,
@@ -321,10 +320,11 @@ export const getAllTrips = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error retrieving trips:", error);
-    sendError(res, 500, "Failed to retrieve trips");
+    return sendError(res, 500, "Failed to retrieve trips");
   }
 };
-export const updateTrip = async (req: AuthRequest, res: Response) => {
+
+export const updateTrip = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { tripId } = req.params;
     const { tripDetails, existingImages } = req.body;
@@ -334,13 +334,21 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
       return sendError(res, 401, "Unauthorized");
     }
 
+    if (!tripId || !mongoose.isValidObjectId(tripId)) {
+      return sendError(res, 400, "Invalid Trip ID format");
+    }
+
     const trip = await Trip.findById(tripId);
 
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
 
-    if (trip.userId.toString() !== req.user.sub) {
+    const isAdmin =
+      req.user.roles?.includes(Role.ADMIN) ||
+      req.user.roles?.includes(Role.SUPERADMIN);
+
+    if (trip.userId.toString() !== req.user.sub && !isAdmin) {
       return sendError(res, 403, "You don't have permission to update this trip");
     }
 
@@ -377,7 +385,6 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
     // Ensure tripDetails is always stored as a string
     let tripDetailsToStore: string;
     if (typeof tripDetails === 'string') {
-      // Validate it's valid JSON
       try {
         JSON.parse(tripDetails);
         tripDetailsToStore = tripDetails;
@@ -406,7 +413,7 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
       return sendError(res, 500, "Invalid trip data format after update");
     }
 
-    sendSuccess(res, 200, "Trip updated successfully", {
+    return sendSuccess(res, 200, "Trip updated successfully", {
       trip: {
         ...updatedTrip.toObject(),
         tripDetails: parsedDetails,
@@ -414,20 +421,19 @@ export const updateTrip = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Error updating trip:", error);
-    sendError(res, 500, "Failed to update the trip");
+    return sendError(res, 500, "Failed to update the trip");
   }
 };
 
-
-export const getTripsByUser = async (req: AuthRequest, res: Response) => {
+export const getTripsByUser = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     if (!req.user) {
       return sendError(res, 401, "Unauthorized");
     }
     const userId = req.user.sub;
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 8;
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 8, 1), 50);
     const skip = (page - 1) * limit;
 
     const trips = await Trip.find({ userId: userId })
@@ -446,7 +452,7 @@ export const getTripsByUser = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    sendSuccess(res, 200, "User trips retrieved successfully", {
+    return sendSuccess(res, 200, "User trips retrieved successfully", {
       trips: tripCards,
       totalPages: Math.ceil(total / limit),
       totalCount: total,
@@ -454,16 +460,19 @@ export const getTripsByUser = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error("Error retrieving user trips:", error);
-    sendError(res, 500, "Failed to retrieve user trips");
+    return sendError(res, 500, "Failed to retrieve user trips");
   }
 };
 
-
-export const deleteTrip = async (req: AuthRequest, res: Response) => {
+export const deleteTrip = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { tripId } = req.params;
     if (!req.user) {
       return sendError(res, 401, "Unauthorized");
+    }
+
+    if (!tripId || !mongoose.isValidObjectId(tripId)) {
+      return sendError(res, 400, "Invalid Trip ID format");
     }
 
     const trip = await Trip.findById(tripId);
@@ -471,13 +480,17 @@ export const deleteTrip = async (req: AuthRequest, res: Response) => {
     if (!trip) {
       return sendError(res, 404, "Trip not found");
     }
-    if (trip.userId.toString() !== req.user.sub) {
+    const isAdmin =
+      req.user.roles?.includes(Role.ADMIN) ||
+      req.user.roles?.includes(Role.SUPERADMIN);
+
+    if (trip.userId.toString() !== req.user.sub && !isAdmin) {
       return sendError(res, 403, "You don't have permission to delete this trip");
     }
     await Trip.findByIdAndDelete(tripId);
-    sendSuccess(res, 200, "Trip deleted successfully");
+    return sendSuccess(res, 200, "Trip deleted successfully");
   } catch (error) {
     console.error("Error deleting trip:", error);
-    sendError(res, 500, "Failed to delete the trip");
+    return sendError(res, 500, "Failed to delete the trip");
   }
 };

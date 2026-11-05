@@ -30,15 +30,15 @@ interface EnvConfig {
 
 export const env: EnvConfig = {
   NODE_ENV: process.env.NODE_ENV || "development",
-  PORT: parseInt(process.env.PORT || "5000", 10),
+  PORT: parseInt(process.env.PORT || "5001", 10),
   HOST: process.env.HOST || "localhost",
   MONGODB_URI: process.env.MONGODB_URI || "",
-  JWT_SECRET: process.env.JWT_SECRET || "fallback-secret-key",
-  JWT_REFRESH_SECRECT: process.env.JWT_REFRESH_SECRECT || "fallback-refresh-key",
+  JWT_SECRET: process.env.JWT_SECRET || "",
+  JWT_REFRESH_SECRECT: process.env.JWT_REFRESH_SECRECT || "",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "15m",
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || "10", 10),
-  CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:5173",
   SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL || "",
   SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD || "",
   SUPERADMIN_NAME: process.env.SUPERADMIN_NAME || "Super Admin",
@@ -49,14 +49,18 @@ export const env: EnvConfig = {
   UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY || "",
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
-  CLIENT_URL: process.env.CLIENT_URL || "",
+  CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
   EMAIL_SERVICE: process.env.EMAIL_SERVICE || "",
   EMAIL_USER: process.env.EMAIL_USER || "",
   EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD || "",
 };
 
 // Validate required env vars on startup
-const requiredEnvVars: (keyof EnvConfig)[] = ["MONGODB_URI", "JWT_SECRET"];
+const requiredEnvVars: (keyof EnvConfig)[] = [
+  "MONGODB_URI",
+  "JWT_SECRET",
+  "JWT_REFRESH_SECRECT",
+];
 requiredEnvVars.forEach((key) => {
   if (!env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);

@@ -7,7 +7,8 @@ export interface JWTPayload {
   sub: string;
   roles: string[];
   email: string;
-  name : string;
+  name: string;
+  rememberMe?: boolean;
   iat?: number;
   exp?: number;
 }
@@ -22,7 +23,7 @@ export const signAccessToken = (user: IUser): string => {
     sub: user._id.toString(),
     roles: user.roles,
     email: user.email,
-    name : user.name
+    name: user.name,
   };
 
   const secret = env.JWT_SECRET;
@@ -37,9 +38,16 @@ export const signAccessToken = (user: IUser): string => {
   return jwt.sign(payload, secret, options);
 };
 
-export const signRefreshToken = (user: IUser): string => {
+/**
+ * Signs a refresh token for the given user
+ * @param user - User object
+ * @param rememberMe - If true, expires in 7 days (7d); otherwise expires in 1 day (1d)
+ * @returns JWT refresh token string
+ */
+export const signRefreshToken = (user: IUser, rememberMe: boolean = true): string => {
   const payload: any = {
     sub: user._id.toString(),
+    rememberMe: Boolean(rememberMe),
   };
 
   const secret = env.JWT_REFRESH_SECRECT;
@@ -47,8 +55,11 @@ export const signRefreshToken = (user: IUser): string => {
     throw new Error("JWT_REFRESH_SECRECT is not defined in environment variables");
   }
 
+  // 7 days if Remember Me is checked, otherwise 1 day
+  const expiresIn = rememberMe ? "7d" : "1d";
+
   const options: SignOptions = {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN as any,
+    expiresIn: expiresIn as any,
   };
 
   return jwt.sign(payload, secret, options);

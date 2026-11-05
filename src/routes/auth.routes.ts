@@ -1,36 +1,98 @@
 import { Router } from "express";
-import { addNewUser, deleteUser, getAllUsers, getMyProfile, googleLogin, loginUser, refreshToken, registerAdmin, registerUser, updateUserStatus } from "../controllers/auth.controller";
+import rateLimit from "express-rate-limit";
+import {
+  addNewUser,
+  adminLogin,
+  deleteUser,
+  getAllUsers,
+  getMyProfile,
+  googleLogin,
+  loginUser,
+  refreshToken,
+  registerAdmin,
+  registerUser,
+  updateUserStatus,
+} from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 import { Role } from "../models/user.model";
 import { upload } from "../middlewares/upload.middleware";
 import { getLatestUserSignups } from "../controllers/stats.controller";
 
-
 const router = Router();
 
-router.post("/register" , registerUser)
+// Rate limiting for auth endpoints (SEC-02)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 auth requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    message: "Too many requests from this IP, please try again after 15 minutes.",
+  },
+});
 
-router.post("/login", loginUser)
+// Strict rate limiting for administrative portal (SEC-ADMIN)
+const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // strict: limit each IP to 5 admin login attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    message: "Too many admin login attempts from this IP. Please try again after 15 minutes.",
+  },
+});
 
-router.post("/google-login", googleLogin);
+router.post("/register", authLimiter, registerUser);
 
-router.get("/me" , authenticate , getMyProfile)
+router.post("/login", authLimiter, loginUser);
 
-router.post("/refresh" , refreshToken)
+router.post("/admin-login", adminAuthLimiter, adminLogin);
 
-router.post("/register/admin" , authenticate, requireRole([Role.SUPERADMIN]), registerAdmin)
+router.post("/google-login", authLimiter, googleLogin);
 
-router.get("/users" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]), getAllUsers )
+router.get("/me", authenticate, getMyProfile);
 
-router.post("/register/new-user" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]), upload.single("profileimg") , addNewUser)
+router.post("/refresh", refreshToken);
 
-router.put("/status/:id" , authenticate, requireRole([Role.ADMIN , Role.SUPERADMIN]) , updateUserStatus)
+router.post(
+  "/register/admin",
+  authenticate,
+  requireRole([Role.SUPERADMIN]),
+  registerAdmin
+);
 
-router.delete("/delete/:id" , authenticate , requireRole([Role.ADMIN , Role.SUPERADMIN]) , deleteUser )
+router.get(
+  "/users",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  getAllUsers
+);
 
-router.get("/latest-users", authenticate, getLatestUserSignups)
+router.post(
+  "/register/new-user",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  upload.single("profileimg"),
+  addNewUser
+);
 
+router.put(
+  "/status/:id",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  updateUserStatus
+);
 
+router.delete(
+  "/delete/:id",
+  authenticate,
+  requireRole([Role.ADMIN, Role.SUPERADMIN]),
+  deleteUser
+);
+
+router.get("/latest-users", authenticate, getLatestUserSignups);
 
 export default router;
